@@ -130,6 +130,8 @@ exports.createHotelBooking = async (req, res, next) => {
       status: 'pending',
     });
 
+    await Room.findByIdAndUpdate(roomId, { $inc: { availableRooms: -parseInt(rooms) } });
+
     res.status(201).json({
       success: true,
       message: 'Booking created',
@@ -270,6 +272,10 @@ exports.cancelBooking = async (req, res, next) => {
       if (booking.returnFlight) {
         await Flight.findByIdAndUpdate(booking.returnFlight, { $inc: { seatsAvailable: paxCount } });
       }
+    }
+    // Restore hotel room count if hotel booking
+    if (booking.bookingType === 'hotel' && booking.room && booking.rooms) {
+      await Room.findByIdAndUpdate(booking.room, { $inc: { availableRooms: booking.rooms } });
     }
 
     booking.status = 'cancelled';

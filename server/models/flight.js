@@ -87,6 +87,10 @@ const flightSchema = new mongoose.Schema({
     min: 0,
   },
   stopCities: [String],
+  refundable: {
+    type: Boolean,
+    default: false,
+  },
   isActive: {
     type: Boolean,
     default: true,

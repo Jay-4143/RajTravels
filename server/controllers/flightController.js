@@ -25,6 +25,11 @@ exports.searchFlights = async (req, res, next) => {
       minPrice,
       maxPrice,
       maxStops,
+      refundable,
+      departureTimeFrom,
+      departureTimeTo,
+      arrivalTimeFrom,
+      arrivalTimeTo,
       page = 1,
       limit = 20,
     } = req.query;
@@ -58,6 +63,41 @@ exports.searchFlights = async (req, res, next) => {
     }
     if (maxStops !== undefined) query.stops = { $lte: parseInt(maxStops) };
     if (flightClass) query.class = flightClass;
+    if (refundable === 'true' || refundable === true) query.refundable = true;
+
+    // Time-of-day filters: departureTime/arrivalTime are full Date; use same day as departureDate
+    if (departureTimeFrom || departureTimeTo) {
+      const d = new Date(departureDate);
+      d.setHours(0, 0, 0, 0);
+      if (departureTimeFrom) {
+        const fromTime = new Date(d);
+        const [h, m] = departureTimeFrom.split(':').map(Number);
+        fromTime.setHours(h || 0, m || 0, 0, 0);
+        query.departureTime = { ...query.departureTime, $gte: fromTime };
+      }
+      if (departureTimeTo) {
+        const toTime = new Date(d);
+        const [h, m] = departureTimeTo.split(':').map(Number);
+        toTime.setHours(h || 23, m || 59, 59, 999);
+        query.departureTime = { ...query.departureTime, $lte: toTime };
+      }
+    }
+    if (arrivalTimeFrom || arrivalTimeTo) {
+      const d = new Date(departureDate);
+      d.setHours(0, 0, 0, 0);
+      if (arrivalTimeFrom) {
+        const fromTime = new Date(d);
+        const [h, m] = arrivalTimeFrom.split(':').map(Number);
+        fromTime.setHours(h || 0, m || 0, 0, 0);
+        query.arrivalTime = { ...query.arrivalTime, $gte: fromTime };
+      }
+      if (arrivalTimeTo) {
+        const toTime = new Date(d);
+        const [h, m] = arrivalTimeTo.split(':').map(Number);
+        toTime.setHours(h || 23, m || 59, 59, 999);
+        query.arrivalTime = { ...query.arrivalTime, $lte: toTime };
+      }
+    }
 
     const sortObj = {};
     if (sort === 'price') sortObj.price = order === 'desc' ? -1 : 1;

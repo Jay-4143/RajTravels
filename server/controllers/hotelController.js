@@ -22,6 +22,8 @@ exports.searchHotels = async (req, res, next) => {
       minRating,
       starCategory,
       amenities,
+      freeCancellation,
+      propertyType,
       checkIn,
       checkOut,
       sort = 'rating',
@@ -41,25 +43,49 @@ exports.searchHotels = async (req, res, next) => {
       const amList = amenities.split(',').map(a => a.trim());
       query.amenities = { $all: amList };
     }
+    if (freeCancellation === 'true' || freeCancellation === true) query.freeCancellation = true;
+    if (propertyType) query.propertyType = new RegExp(propertyType, 'i');
 
     const sortObj = {};
     if (sort === 'rating') sortObj.rating = order === 'asc' ? 1 : -1;
     else if (sort === 'starCategory') sortObj.starCategory = order === 'asc' ? 1 : -1;
     else sortObj.rating = -1;
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    let hotels = await Hotel.find(query).sort(sortObj).skip(skip).limit(parseInt(limit)).populate(null).lean();
-    const total = await Hotel.countDocuments(query);
+    // Fetch more when price filter/sort is used so we can filter/sort by room price
+    const needPriceFilter = !!(minPrice || maxPrice || sort === 'price');
+    const fetchLimit = needPriceFilter ? 500 : parseInt(limit);
+    const fetchSkip = needPriceFilter ? 0 : (parseInt(page) - 1) * parseInt(limit);
+    let hotels = await Hotel.find(query).sort(sortObj).skip(fetchSkip).limit(fetchLimit).lean();
 
-    // If price filter - filter hotels that have rooms in price range
+    const hotelIds = hotels.map(h => h._id);
+    const roomPrices = await Room.aggregate([
+      { $match: { hotel: { $in: hotelIds }, isActive: true } },
+      { $group: { _id: '$hotel', minPrice: { $min: '$pricePerNight' } } },
+    ]);
+    const priceMap = {};
+    roomPrices.forEach(r => { priceMap[r._id.toString()] = r.minPrice; });
+    hotels = hotels.map(h => ({ ...h, pricePerNight: priceMap[h._id.toString()] ?? 0 }));
+
     if (minPrice || maxPrice) {
-      const roomQuery = { isActive: true };
-      roomQuery.pricePerNight = {};
-      if (minPrice) roomQuery.pricePerNight.$gte = parseInt(minPrice);
-      if (maxPrice) roomQuery.pricePerNight.$lte = parseInt(maxPrice);
-      roomQuery.hotel = { $in: hotels.map(h => h._id) };
-      const roomHotelIds = await Room.distinct('hotel', roomQuery);
-      hotels = hotels.filter(h => roomHotelIds.some(id => id.toString() === h._id.toString()));
+      hotels = hotels.filter(h => {
+        const p = h.pricePerNight || 0;
+        if (minPrice && p < parseInt(minPrice)) return false;
+        if (maxPrice && p > parseInt(maxPrice)) return false;
+        return true;
+      });
+    }
+
+    if (sort === 'price') {
+      hotels.sort((a, b) => (order === 'asc' ? (a.pricePerNight - b.pricePerNight) : (b.pricePerNight - a.pricePerNight)));
+    }
+
+    let total;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    if (needPriceFilter) {
+      total = hotels.length;
+      hotels = hotels.slice(skip, skip + parseInt(limit));
+    } else {
+      total = await Hotel.countDocuments(query);
     }
 
     res.json({
@@ -67,6 +93,67 @@ exports.searchHotels = async (req, res, next) => {
       hotels,
       pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) },
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Get featured hotels (top-rated across cities)
+ * @route   GET /api/hotels/featured
+ * @access  Public
+ */
+exports.getFeaturedHotels = async (req, res, next) => {
+  try {
+    const { limit = 8 } = req.query;
+    const hotels = await Hotel.find({ isActive: true })
+      .sort({ rating: -1, starCategory: -1 })
+      .limit(parseInt(limit))
+      .lean();
+
+    const hotelIds = hotels.map(h => h._id);
+    const roomPrices = await Room.aggregate([
+      { $match: { hotel: { $in: hotelIds }, isActive: true } },
+      { $group: { _id: '$hotel', minPrice: { $min: '$pricePerNight' } } },
+    ]);
+    const priceMap = {};
+    roomPrices.forEach(r => { priceMap[r._id.toString()] = r.minPrice; });
+    const result = hotels.map(h => ({ ...h, pricePerNight: priceMap[h._id.toString()] ?? 0 }));
+
+    res.json({ success: true, hotels: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Get popular hotel destinations (cities with count and min price)
+ * @route   GET /api/hotels/destinations
+ * @access  Public
+ */
+exports.getPopularDestinations = async (req, res, next) => {
+  try {
+    const cityCounts = await Hotel.aggregate([
+      { $match: { isActive: true } },
+      { $group: { _id: '$city', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 24 },
+    ]);
+    const cityMinPrices = await Room.aggregate([
+      { $lookup: { from: 'hotels', localField: 'hotel', foreignField: '_id', as: 'h' } },
+      { $unwind: '$h' },
+      { $match: { 'h.isActive': true, isActive: true } },
+      { $group: { _id: '$h.city', minPrice: { $min: '$pricePerNight' } } },
+    ]);
+    const priceMap = {};
+    cityMinPrices.forEach(p => { priceMap[p._id] = p.minPrice; });
+    const destinations = cityCounts.map(c => ({
+      city: c._id,
+      count: c.count,
+      minPrice: priceMap[c._id] || 1999,
+    }));
+
+    res.json({ success: true, destinations });
   } catch (error) {
     next(error);
   }

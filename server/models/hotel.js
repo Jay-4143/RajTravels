@@ -63,6 +63,15 @@ const hotelSchema = new mongoose.Schema({
     checkIn: String,
     pets: String,
   },
+  freeCancellation: {
+    type: Boolean,
+    default: false,
+  },
+  propertyType: {
+    type: String,
+    trim: true,
+    default: 'Hotel',
+  },
   isActive: {
     type: Boolean,
     default: true,
