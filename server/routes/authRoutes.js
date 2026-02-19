@@ -1,66 +1,32 @@
-const express = require("express");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const User = require("../models/user");
+/**
+ * Auth Routes
+ * /api/auth/*
+ */
 
+const express = require('express');
 const router = express.Router();
+const authController = require('../controllers/authController');
+const { protect } = require('../middleware/authMiddleware');
+const {
+  registerValidation,
+  loginValidation,
+  forgotPasswordValidation,
+  resetPasswordValidation,
+  updateProfileValidation,
+  updatePasswordValidation,
+  validate,
+} = require('../validations/authValidation');
 
-// Register
-router.post("/register", async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
+// Public routes
+router.post('/register', registerValidation, validate, authController.register);
+router.post('/login', loginValidation, validate, authController.login);
+router.post('/forgot-password', forgotPasswordValidation, validate, authController.forgotPassword);
+router.post('/reset-password', resetPasswordValidation, validate, authController.resetPassword);
 
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({ message: "User already exists" });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = new User({
-      name,
-      email,
-      password: hashedPassword,
-    });
-
-    await user.save(); // ✅ THIS WAS MISSING
-
-    res.status(201).json({ message: "User registered successfully" });
-
-  } catch (error) {
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// Login
-router.post("/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: "Invalid credentials" });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: "Invalid credentials" });
-    }
-
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-
-    res.json({
-      message: "Login successful",
-      token,
-    });
-
-  } catch (error) {
-    res.status(500).json({ message: "Server error" });
-  }
-});
+// Protected routes
+router.get('/me', protect, authController.getMe);
+router.put('/profile', protect, updateProfileValidation, validate, authController.updateProfile);
+router.put('/password', protect, updatePasswordValidation, validate, authController.updatePassword);
+router.post('/logout', protect, authController.logout);
 
 module.exports = router;
