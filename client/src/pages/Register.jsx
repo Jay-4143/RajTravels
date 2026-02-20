@@ -1,15 +1,17 @@
 import { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const Register = () => {
   const navigate = useNavigate();
+  const { register } = useAuth(); // Use context
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
   });
+  const [error, setError] = useState("");
 
   const handleChange = (e) => {
     setFormData({
@@ -20,22 +22,14 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
 
-    try {
-      const res = await axios.post(
-        "http://localhost:5000/api/auth/register",
-        formData
-      );
+    const result = await register(formData.name, formData.email, formData.password);
 
-      // 🔥 Save token & user
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-
-      // Redirect to home
+    if (result.success) {
       navigate("/");
-
-    } catch (error) {
-      alert(error.response?.data?.message || "Error");
+    } else {
+      setError(result.message);
     }
   };
 
@@ -47,12 +41,15 @@ const Register = () => {
       >
         <h2 className="text-2xl font-bold mb-6 text-center">Sign Up</h2>
 
+        {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-center">{error}</div>}
+
         <input
           type="text"
           name="name"
           placeholder="Name"
           className="w-full border p-3 mb-4 rounded"
           onChange={handleChange}
+          required
         />
 
         <input
@@ -61,6 +58,7 @@ const Register = () => {
           placeholder="Email"
           className="w-full border p-3 mb-4 rounded"
           onChange={handleChange}
+          required
         />
 
         <input
@@ -69,6 +67,7 @@ const Register = () => {
           placeholder="Password"
           className="w-full border p-3 mb-4 rounded"
           onChange={handleChange}
+          required
         />
 
         <button className="w-full bg-blue-600 text-white py-3 rounded hover:bg-blue-700">

@@ -2,13 +2,14 @@ import { useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { HiMenuAlt3, HiX, HiChevronDown } from "react-icons/hi";
 import { FaPlane, FaHotel, FaBriefcase, FaUmbrellaBeach, FaBus, FaShip, FaCar, FaUser } from "react-icons/fa";
+import { useAuth } from "../context/AuthContext";
 
 const navItems = [
   { to: "/", path: "/", label: "Flights", Icon: FaPlane },
   { to: "/hotels", path: "/hotels", label: "Hotel", Icon: FaHotel },
   { to: "/visa", path: "/visa", label: "Visa", Icon: FaBriefcase },
   { to: "/holidays", path: "/holidays", label: "Holidays", Icon: FaUmbrellaBeach },
-  { to: "/bus", path: "/bus", label: "Bus", Icon: FaBus },
+  { to: "/buses", path: "/buses", label: "Bus", Icon: FaBus },
   { to: "/cruise", path: "/cruise", label: "Cruise", Icon: FaShip },
   { to: "/cabs", path: "/cabs", label: "Cabs", Icon: FaCar },
 ];
@@ -16,7 +17,10 @@ const navItems = [
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [currencyOpen, setCurrencyOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+
   const location = useLocation();
+  const { user, logout } = useAuth();
   const isFlights = location.pathname === "/" || location.pathname === "/flights";
 
   return (
@@ -36,9 +40,8 @@ const Navbar = () => {
                 <NavLink
                   key={to}
                   to={to}
-                  className={`flex flex-col items-center pt-2 pb-1.5 px-3 xl:px-4 rounded-t-lg transition-colors border-b-2 ${
-                    active ? "text-blue-600 border-blue-600" : "text-gray-700 border-transparent hover:text-blue-600"
-                  }`}
+                  className={`flex flex-col items-center pt-2 pb-1.5 px-3 xl:px-4 rounded-t-lg transition-colors border-b-2 ${active ? "text-blue-600 border-blue-600" : "text-gray-700 border-transparent hover:text-blue-600"
+                    }`}
                 >
                   <Icon className="w-5 h-5 mb-0.5" />
                   <span className="text-xs font-medium whitespace-nowrap">{label}</span>
@@ -69,13 +72,47 @@ const Navbar = () => {
                 </>
               )}
             </div>
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors text-sm"
-            >
-              <FaUser className="w-4 h-4" />
-              LOGIN / REGISTER
-            </Link>
+
+            {user ? (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setProfileOpen(!profileOpen)}
+                  className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs">
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span>{user.name}</span>
+                  <HiChevronDown className="w-4 h-4 text-gray-500" />
+                </button>
+                {profileOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setProfileOpen(false)} aria-hidden="true" />
+                    <div className="absolute right-0 mt-1 w-48 py-1 bg-white border rounded-lg shadow-lg z-20">
+                      <Link to="/profile" className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-50">
+                        My Profile
+                      </Link>
+                      <button
+                        onClick={logout}
+                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors text-sm"
+              >
+                <FaUser className="w-4 h-4" />
+                LOGIN / REGISTER
+              </Link>
+            )}
+
           </div>
 
           {/* Mobile menu button */}
@@ -107,9 +144,21 @@ const Navbar = () => {
             ))}
             <div className="pt-4 mt-2 border-t flex flex-col gap-2">
               <div className="px-2 py-2 text-sm text-gray-500">IND | INR</div>
-              <Link to="/login" onClick={() => setMobileOpen(false)} className="flex items-center justify-center gap-2 py-3 bg-red-500 text-white font-semibold rounded-lg">
-                <FaUser /> LOGIN / REGISTER
-              </Link>
+
+              {user ? (
+                <>
+                  <Link to="/profile" onClick={() => setMobileOpen(false)} className="px-2 py-2 text-sm font-medium">
+                    My Profile
+                  </Link>
+                  <button onClick={() => { logout(); setMobileOpen(false); }} className="px-2 py-2 text-sm font-medium text-red-600 text-left">
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <Link to="/login" onClick={() => setMobileOpen(false)} className="flex items-center justify-center gap-2 py-3 bg-red-500 text-white font-semibold rounded-lg">
+                  <FaUser /> LOGIN / REGISTER
+                </Link>
+              )}
             </div>
           </div>
         </div>

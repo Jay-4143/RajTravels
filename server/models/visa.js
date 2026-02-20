@@ -1,8 +1,3 @@
-/**
- * Visa Model
- * Visa types and country-based listings
- */
-
 const mongoose = require('mongoose');
 
 const visaSchema = new mongoose.Schema({
@@ -10,43 +5,59 @@ const visaSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Country is required'],
     trim: true,
-    index: true,
+    index: true
   },
-  countryCode: {
+  nationality: {
     type: String,
     trim: true,
-    uppercase: true,
+    default: 'All'
   },
   visaType: {
-    type: String,
-    required: true,
-    enum: ['tourist', 'business', 'student', 'transit', 'work', 'family'],
-    index: true,
+    type: String, // e.g., 'Tourist', 'Business'
+    required: [true, 'Visa type is required'],
+    trim: true
   },
-  name: {
+  processingTime: {
     type: String,
-    required: true,
-    trim: true,
+    required: [true, 'Processing time is required']
   },
-  description: String,
-  validity: String, // e.g. "90 days", "6 months"
-  processingTime: String, // e.g. "5-7 business days"
-  price: {
+  duration: {
+    type: String, // e.g., '30 Days'
+    required: [true, 'Duration is required']
+  },
+  entryType: {
+    type: String, // e.g., 'Single Entry', 'Multiple Entry'
+    required: [true, 'Entry type is required']
+  },
+  validity: {
+    type: String, // e.g., '58 Days'
+    required: [true, 'Validity perod is required']
+  },
+  cost: {
     type: Number,
-    required: true,
-    min: 0,
+    required: [true, 'Cost is required']
   },
-  documents: [String],
-  requirements: [String],
+  currency: {
+    type: String,
+    default: 'INR'
+  },
+  documentsRequired: [{
+    type: String
+  }],
+  description: {
+    type: String
+  },
   isActive: {
     type: Boolean,
-    default: true,
+    default: true
   },
+  images: {
+    type: [String],
+    default: []
+  }
 }, {
-  timestamps: true,
+  timestamps: true
 });
 
-visaSchema.index({ country: 1, visaType: 1 });
-
-const Visa = mongoose.model('Visa', visaSchema);
-module.exports = Visa;
+// Check if model already exists to prevent OverwriteModelError
+module.exports = mongoose.models.Visa || mongoose.model('Visa', visaSchema);

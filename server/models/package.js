@@ -51,6 +51,10 @@ const packageSchema = new mongoose.Schema({
   exclusions: [String],
   images: [String],
   highlights: [String],
+  category: [{ type: String }],   // Beach, City, Nature, Adventure, Heritage, Luxury, Romantic, Honeymoon, Family
+  theme: [{ type: String }],      // International, Domestic
+  featured: { type: Boolean, default: false },
+  hotDeal: { type: Boolean, default: false },
   validFrom: Date,
   validTo: Date,
   maxPeople: {

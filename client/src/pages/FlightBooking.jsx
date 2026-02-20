@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { createFlightBooking } from "../api/bookings";
+import SeatMap from "../components/SeatMap";
 
 const FlightBooking = () => {
   const navigate = useNavigate();
@@ -9,7 +10,8 @@ const FlightBooking = () => {
 
   const [step, setStep] = useState(1);
   const [passengers, setPassengers] = useState([]);
-  const [seats, setSeats] = useState([]);
+  const [selectedSeats, setSelectedSeats] = useState([]);
+  const [returnSelectedSeats, setReturnSelectedSeats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [bookingRef, setBookingRef] = useState(null);
   const [error, setError] = useState(null);
@@ -24,7 +26,6 @@ const FlightBooking = () => {
       .fill(null)
       .map((_, i) => ({ name: "", age: i < (searchParams.adults || 0) ? 18 : i < (searchParams.adults || 0) + (searchParams.children || 0) ? 10 : 1 }));
     setPassengers(paxList);
-    setSeats(Array(totalPax || 1).fill(""));
   }, [flight, searchParams, navigate]);
 
   const formatTime = (date) => {
@@ -53,18 +54,24 @@ const FlightBooking = () => {
     setPassengers(updated);
   };
 
-  const handleSeatChange = (index, value) => {
-    const updated = [...seats];
-    updated[index] = value;
-    setSeats(updated);
-  };
-
-  const handleReview = () => {
+  const handleDetailsSubmit = () => {
     if (passengers.some((p) => !p.name || !p.age)) {
       alert("Please fill all passenger details.");
       return;
     }
     setStep(2);
+  };
+
+  const handleSeatSelectionComplete = () => {
+    if (selectedSeats.length !== passengers.length) {
+      alert(`Please select ${passengers.length} seats for the outbound flight.`);
+      return;
+    }
+    if (tripType === "round-trip" && returnFlight && returnSelectedSeats.length !== passengers.length) {
+      alert(`Please select ${passengers.length} seats for the return flight.`);
+      return;
+    }
+    setStep(3);
   };
 
   const handlePayment = async () => {
@@ -74,12 +81,19 @@ const FlightBooking = () => {
       const res = await createFlightBooking({
         flightId: flight._id,
         returnFlightId: returnFlight?._id,
-        passengers: passengers.map((p) => ({ name: p.name, age: p.age })),
-        seats: seats.filter(Boolean),
+        passengers: passengers.map((p, i) => ({
+          name: p.name,
+          age: p.age,
+          // Map seats to passengers based on order for simplicity
+          seat: selectedSeats[i]
+        })),
+        seats: selectedSeats,
+        // Note: Backend might need update to handle return seats structure if strictly validated
+        // For now sending outbound seats as primary
         tripType: tripType || "one-way",
       });
       setBookingRef(res.data.booking.bookingReference);
-      setStep(3);
+      setStep(4);
     } catch (err) {
       setError(err.response?.data?.message || "Booking failed.");
     } finally {
@@ -98,12 +112,11 @@ const FlightBooking = () => {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-gray-900">Flight Booking</h1>
             <div className="flex gap-2">
-              {[1, 2, 3].map((s) => (
+              {[1, 2, 3, 4].map((s) => (
                 <div
                   key={s}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${
-                    step >= s ? "bg-red-500 text-white" : "bg-gray-200 text-gray-600"
-                  }`}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${step >= s ? "bg-red-500 text-white" : "bg-gray-200 text-gray-600"
+                    }`}
                 >
                   {s}
                 </div>
@@ -140,16 +153,6 @@ const FlightBooking = () => {
                           required
                         />
                       </div>
-                      <div className="col-span-2">
-                        <label className="block text-sm text-gray-600 mb-1">Seat (Optional)</label>
-                        <input
-                          type="text"
-                          value={seats[i] || ""}
-                          onChange={(e) => handleSeatChange(i, e.target.value)}
-                          placeholder="e.g., 12A"
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                        />
-                      </div>
                     </div>
                   </div>
                 ))}
@@ -157,16 +160,57 @@ const FlightBooking = () => {
               <div className="mt-6 flex justify-end">
                 <button
                   type="button"
-                  onClick={handleReview}
+                  onClick={handleDetailsSubmit}
                   className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg"
                 >
-                  Review Booking
+                  Continue to Seats
                 </button>
               </div>
             </div>
           )}
 
           {step === 2 && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4">{flight.from} → {flight.to} Seat Selection</h2>
+              <SeatMap
+                flightId={flight._id}
+                passengers={passengers}
+                selectedSeats={selectedSeats}
+                onSeatSelect={setSelectedSeats}
+              />
+
+              {tripType === "round-trip" && returnFlight && (
+                <div className="mt-8 border-t pt-8">
+                  <h2 className="text-xl font-semibold mb-4">{returnFlight.from} → {returnFlight.to} Seat Selection</h2>
+                  <SeatMap
+                    flightId={returnFlight._id}
+                    passengers={passengers}
+                    selectedSeats={returnSelectedSeats}
+                    onSeatSelect={setReturnSelectedSeats}
+                  />
+                </div>
+              )}
+
+              <div className="mt-6 flex justify-between">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="px-6 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSeatSelectionComplete}
+                  className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg"
+                >
+                  Continue to Review
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
             <div>
               <h2 className="text-xl font-semibold mb-4">Review Booking</h2>
               <div className="space-y-4">
@@ -193,11 +237,15 @@ const FlightBooking = () => {
                   )}
                 </div>
                 <div className="border border-gray-200 rounded-lg p-4">
-                  <h3 className="font-semibold mb-2">Passengers</h3>
+                  <h3 className="font-semibold mb-2">Passengers & Seats</h3>
                   {passengers.map((p, i) => (
-                    <p key={i} className="text-sm text-gray-600">
-                      {p.name} (Age: {p.age}) {seats[i] && `• Seat: ${seats[i]}`}
-                    </p>
+                    <div key={i} className="text-sm text-gray-600 flex justify-between">
+                      <span>{p.name} (Age: {p.age})</span>
+                      <span>
+                        Seat: <strong>{selectedSeats[i] || "None"}</strong>
+                        {tripType === "round-trip" && returnSelectedSeats[i] && ` | Return: ${returnSelectedSeats[i]}`}
+                      </span>
+                    </div>
                   ))}
                 </div>
                 <div className="border border-gray-200 rounded-lg p-4">
@@ -234,7 +282,7 @@ const FlightBooking = () => {
               <div className="mt-6 flex justify-between">
                 <button
                   type="button"
-                  onClick={() => setStep(1)}
+                  onClick={() => setStep(2)}
                   className="px-6 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50"
                 >
                   Back
@@ -251,7 +299,7 @@ const FlightBooking = () => {
             </div>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <div className="text-center py-8">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -273,7 +321,7 @@ const FlightBooking = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigate("/bookings")}
+                  onClick={() => navigate("/profile")}
                   className="px-6 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50"
                 >
                   View My Bookings

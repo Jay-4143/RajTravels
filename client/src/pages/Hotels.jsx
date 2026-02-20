@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import HotelSearch from "../components/HotelSearch";
 import HotelResults from "../components/HotelResults";
+import HotelFilters from "../components/HotelFilters";
 import HotelPopularDestinations from "../components/HotelPopularDestinations";
 import HotelFeaturedHotels from "../components/HotelFeaturedHotels";
 import HotelPromoBanner from "../components/HotelPromoBanner";
@@ -113,27 +114,37 @@ const Hotels = () => {
     <>
       <HotelSearch onSearch={handleSearch} />
       {searchParams && (
-        <>
-          {error && (
-            <div className="max-w-7xl mx-auto px-4 py-2">
-              <p className="text-red-600 bg-red-50 rounded-lg p-3 text-sm">{error}</p>
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col lg:flex-row gap-8">
+            <HotelFilters
+              filterParams={filterParams}
+              onFilterChange={handleFilterChange}
+              showFilters={true} // Simplification: Manage toggle state inside Hotels or pass it dwon
+              setShowFilters={() => { }}
+            />
+            <div className="flex-1 min-w-0">
+              {error && (
+                <div className="mb-4">
+                  <p className="text-red-600 bg-red-50 rounded-lg p-3 text-sm">{error}</p>
+                </div>
+              )}
+              <HotelResults
+                hotels={hotels}
+                searchParams={searchParams}
+                filterParams={filterParams}
+                pagination={pagination}
+                onFilterChange={handleFilterChange}
+                onSortChange={handleSortChange}
+                onPageChange={(page) => {
+                  if (searchParams) runSearch(searchParams, filterParams, sort, order, page);
+                }}
+                sort={sort}
+                order={order}
+                loading={loading}
+              />
             </div>
-          )}
-          <HotelResults
-            hotels={hotels}
-            searchParams={searchParams}
-            filterParams={filterParams}
-            pagination={pagination}
-            onFilterChange={handleFilterChange}
-            onSortChange={handleSortChange}
-            onPageChange={(page) => {
-              if (searchParams) runSearch(searchParams, filterParams, sort, order, page);
-            }}
-            sort={sort}
-            order={order}
-            loading={loading}
-          />
-        </>
+          </div>
+        </section>
       )}
       <HotelPopularDestinations onCityClick={(city) => {
         const today = new Date().toISOString().slice(0, 10);

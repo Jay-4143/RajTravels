@@ -1,14 +1,16 @@
 import { useState } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom"; // Added Link
+import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login } = useAuth(); // Use context
 
   const [formData, setFormData] = useState({
     email: "",
     password: ""
   });
+  const [error, setError] = useState("");
 
   const handleChange = (e) => {
     setFormData({
@@ -19,21 +21,14 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
 
-    try {
-      const res = await axios.post(
-        "http://localhost:5000/api/auth/login",
-        formData
-      );
+    const result = await login(formData.email, formData.password);
 
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-
-      alert("Login successful");
-      navigate("/");
-
-    } catch (error) {
-      alert(error.response?.data?.message || "Error");
+    if (result.success) {
+      navigate("/"); // Redirect to home or previous page
+    } else {
+      setError(result.message);
     }
   };
 
@@ -42,12 +37,15 @@ const Login = () => {
       <form onSubmit={handleSubmit} className="bg-white p-8 rounded-xl shadow-md w-96">
         <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
 
+        {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-center">{error}</div>}
+
         <input
           type="email"
           name="email"
           placeholder="Email"
           className="w-full border p-3 mb-4 rounded"
           onChange={handleChange}
+          required
         />
 
         <input
@@ -56,11 +54,16 @@ const Login = () => {
           placeholder="Password"
           className="w-full border p-3 mb-4 rounded"
           onChange={handleChange}
+          required
         />
 
-        <button className="w-full bg-red-500 text-white py-3 rounded hover:bg-red-600">
+        <button className="w-full bg-red-500 text-white py-3 rounded hover:bg-red-600 transition-colors">
           Login
         </button>
+
+        <div className="mt-4 text-center text-sm">
+          <Link to="/forgot-password" class="text-blue-500 hover:underline">Forgot Password?</Link>
+        </div>
       </form>
     </div>
   );

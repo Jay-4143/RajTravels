@@ -80,195 +80,77 @@ const HotelResults = ({
   loading,
 }) => {
   const navigate = useNavigate();
-  const [showFilters, setShowFilters] = useState(true);
-
-  const amenities = useMemo(() => {
-    const set = new Set();
-    hotels.forEach((h) => h.amenities?.forEach((a) => set.add(a)));
-    return Array.from(set).sort();
-  }, [hotels]);
 
   const handleViewDetails = (hotel) => {
     navigate(`/hotels/${hotel._id}`, { state: { searchParams } });
   };
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex flex-col lg:flex-row gap-8">
-        <aside className={`lg:w-64 flex-shrink-0 ${showFilters ? "block" : "hidden lg:block"}`}>
-          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm sticky top-24">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                <HiFilter className="w-5 h-5" /> Filters
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowFilters(!showFilters)}
-                className="lg:hidden text-gray-500 hover:text-gray-700"
-              >
-                {showFilters ? "Hide" : "Show"}
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Price per night (₹)</label>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    placeholder="Min"
-                    value={filterParams.minPrice ?? ""}
-                    onChange={(e) => onFilterChange({ minPrice: e.target.value ? Number(e.target.value) : undefined })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Max"
-                    value={filterParams.maxPrice ?? ""}
-                    onChange={(e) => onFilterChange({ maxPrice: e.target.value ? Number(e.target.value) : undefined })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Star Rating</label>
-                <div className="space-y-1">
-                  {[5, 4, 3, 2, 1].map((stars) => (
-                    <label key={stars} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={filterParams.starCategory === stars}
-                        onChange={(e) => onFilterChange({ starCategory: e.target.checked ? stars : undefined })}
-                        className="rounded border-gray-300 text-blue-600"
-                      />
-                      <span className="text-sm text-gray-700">
-                        {Array(stars).fill("★").join("")} {stars} Star{stars !== 1 ? "s" : ""}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Property Type</label>
-                <select
-                  value={filterParams.propertyType ?? ""}
-                  onChange={(e) => onFilterChange({ propertyType: e.target.value || undefined })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="">All Types</option>
-                  {PROPERTY_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Amenities</label>
-                <div className="space-y-1 max-h-40 overflow-y-auto">
-                  {AMENITIES_OPTIONS.filter((a) => amenities.includes(a)).map((a) => (
-                    <label key={a} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={(filterParams.amenities || []).includes(a)}
-                        onChange={(e) => {
-                          const current = filterParams.amenities || [];
-                          const updated = e.target.checked
-                            ? [...current, a]
-                            : current.filter((x) => x !== a);
-                          onFilterChange({ amenities: updated.length > 0 ? updated : undefined });
-                        }}
-                        className="rounded border-gray-300 text-blue-600"
-                      />
-                      <span className="text-sm text-gray-700">{a}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={filterParams.freeCancellation === true}
-                  onChange={(e) => onFilterChange({ freeCancellation: e.target.checked })}
-                  className="rounded border-gray-300 text-blue-600"
-                />
-                <span className="text-sm text-gray-700">Free Cancellation</span>
-              </label>
-            </div>
-          </div>
-        </aside>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-            <p className="text-gray-600">
-              {loading ? "Searching..." : `${pagination?.total ?? hotels.length} hotel(s) found`}
-            </p>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Sort:</span>
-              <select
-                value={`${sort}-${order}`}
-                onChange={(e) => {
-                  const [s, o] = e.target.value.split("-");
-                  onSortChange(s, o);
-                }}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              >
-                <option value="rating-desc">Rating: High to Low</option>
-                <option value="rating-asc">Rating: Low to High</option>
-                <option value="price-asc">Price: Low to High</option>
-                <option value="price-desc">Price: High to Low</option>
-                <option value="starCategory-desc">Stars: High to Low</option>
-              </select>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center py-16">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
-            </div>
-          ) : hotels.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-500">
-              No hotels found. Try different dates or filters.
-            </div>
-          ) : (
-            <>
-              <div className="space-y-4">
-                {hotels.map((hotel) => (
-                  <HotelCard key={hotel._id} hotel={hotel} searchParams={searchParams} onViewDetails={handleViewDetails} />
-                ))}
-              </div>
-              {pagination && pagination.pages > 1 && onPageChange && (
-                <div className="mt-8 flex justify-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onPageChange(pagination.page - 1)}
-                    disabled={pagination.page <= 1}
-                    className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                  >
-                    Previous
-                  </button>
-                  <span className="px-4 py-2 text-gray-600">
-                    Page {pagination.page} of {pagination.pages}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => onPageChange(pagination.page + 1)}
-                    disabled={pagination.page >= pagination.pages}
-                    className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
-            </>
-          )}
+    <div className="flex-1 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <p className="text-gray-600">
+          {loading ? "Searching..." : `${pagination?.total ?? hotels.length} hotel(s) found`}
+        </p>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Sort:</span>
+          <select
+            value={`${sort}-${order}`}
+            onChange={(e) => {
+              const [s, o] = e.target.value.split("-");
+              onSortChange(s, o);
+            }}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+          >
+            <option value="rating-desc">Rating: High to Low</option>
+            <option value="rating-asc">Rating: Low to High</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+            <option value="starCategory-desc">Stars: High to Low</option>
+          </select>
         </div>
       </div>
-    </section>
+
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+        </div>
+      ) : hotels.length === 0 ? (
+        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-500">
+          No hotels found. Try different dates or filters.
+        </div>
+      ) : (
+        <>
+          <div className="space-y-4">
+            {hotels.map((hotel) => (
+              <HotelCard key={hotel._id} hotel={hotel} searchParams={searchParams} onViewDetails={handleViewDetails} />
+            ))}
+          </div>
+          {pagination && pagination.pages > 1 && onPageChange && (
+            <div className="mt-8 flex justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => onPageChange(pagination.page - 1)}
+                disabled={pagination.page <= 1}
+                className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                Previous
+              </button>
+              <span className="px-4 py-2 text-gray-600">
+                Page {pagination.page} of {pagination.pages}
+              </span>
+              <button
+                type="button"
+                onClick={() => onPageChange(pagination.page + 1)}
+                disabled={pagination.page >= pagination.pages}
+                className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 };
 

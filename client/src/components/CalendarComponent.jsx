@@ -114,10 +114,10 @@ const CalendarComponent = ({
   return (
     <div
       ref={panelRef}
-      className="absolute left-1/2 -translate-x-1/2 top-0 z-[60] w-[calc(100%-2rem)] max-w-[1100px] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden"
+      className="absolute left-1/2 -translate-x-1/2 top-0 z-[80] w-[calc(100%-1rem)] max-w-[780px] bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden"
     >
       {/* Header: DEPARTURE ... RETURN ... */}
-      <div className="flex items-center justify-between px-8 py-4 border-b border-gray-200 bg-gray-50">
+      <div className="flex items-center justify-between px-4 sm:px-5 py-2.5 border-b border-gray-200 bg-white">
         <button
           type="button"
           onClick={() => setLeftDate(new Date(leftDate.getFullYear(), leftDate.getMonth() - 1, 1))}
@@ -125,13 +125,17 @@ const CalendarComponent = ({
         >
           <FaChevronLeft className="w-4 h-4" />
         </button>
-        <div className="flex items-center gap-6">
-          <span className={`text-sm font-semibold pb-1 ${activeField === "departure" ? "text-gray-900 border-b-2 border-red-600" : "text-gray-600"}`}>
-            DEPARTURE {dep ? formatHeaderDate(dep) : "Select"}
-          </span>
-          <div className="flex items-center gap-2">
-            <span className={`text-sm font-semibold pb-1 ${activeField === "return" ? "text-gray-900 border-b-2 border-red-600" : "text-gray-600"}`}>
-              RETURN {ret ? formatHeaderDate(ret) : isRoundTrip ? "Select" : "—"}
+        <div className="flex items-center gap-5">
+          <div className="flex flex-col">
+            <span className="text-[10px] font-semibold text-gray-500">DEPARTURE</span>
+            <span className={`text-xs font-semibold pb-1 ${activeField === "departure" ? "text-gray-900 border-b-2 border-red-600" : "text-gray-700"}`}>
+              {dep ? formatHeaderDate(dep) : "Select"}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] font-semibold text-gray-500">RETURN</span>
+            <span className={`text-xs font-semibold pb-1 ${activeField === "return" ? "text-gray-900 border-b-2 border-red-600" : "text-gray-700"}`}>
+              {ret ? formatHeaderDate(ret) : isRoundTrip ? "Select" : "—"}
             </span>
             {ret && isRoundTrip && (
               <button
@@ -155,20 +159,20 @@ const CalendarComponent = ({
       </div>
 
       {/* Two months */}
-      <div className="flex p-8 gap-16">
+      <div className="flex p-4 sm:p-5 gap-4 sm:gap-6">
         {/* Left month */}
         <div className="flex-1">
-          <div className="flex items-center justify-center mb-5">
-            <span className="text-base font-bold text-red-600">{monthTitle(leftDate.getFullYear(), leftDate.getMonth())}</span>
+          <div className="flex items-center justify-center mb-3">
+            <span className="text-xs sm:text-sm font-bold text-red-600">{monthTitle(leftDate.getFullYear(), leftDate.getMonth())}</span>
           </div>
-          <div className="grid grid-cols-7 gap-x-3 gap-y-2">
+          <div className="grid grid-cols-7 gap-x-1 sm:gap-x-2 gap-y-1 sm:gap-y-1.5">
             {WEEKDAYS.map((w) => (
-              <div key={w} className="text-xs font-semibold text-gray-600 py-2 text-center">
+              <div key={w} className="text-[10px] font-semibold text-gray-500 py-1.5 text-center">
                 {w}
               </div>
             ))}
             {leftDays.map((day, i) => {
-              if (!day) return <div key={`l-e-${i}`} className="h-16" />;
+              if (!day) return <div key={`l-e-${i}`} className="h-10 sm:h-11" />;
               const key = toDateKey(day);
               const isSelected = isSameDay(day, dep) || isSameDay(day, ret);
               const inRange = isRoundTrip && dep && ret && isInRange(day, dep, ret) && !isSelected;
@@ -180,7 +184,7 @@ const CalendarComponent = ({
                   key={key}
                   type="button"
                   onClick={() => handleDateClick(day)}
-                  className={`relative h-16 flex flex-col items-center justify-center rounded-lg transition-colors ${
+                  className={`relative h-10 sm:h-11 flex flex-col items-center justify-center rounded-lg transition-colors ${
                     isSelected
                       ? "bg-blue-600 text-white hover:bg-blue-700"
                       : inRange
@@ -190,8 +194,8 @@ const CalendarComponent = ({
                       : "text-gray-900 hover:bg-gray-100"
                   }`}
                 >
-                  <span className="text-sm font-semibold">{day.getDate()}</span>
-                  <span className={`text-[10px] font-normal mt-0.5 ${isSelected ? "text-white/90" : lowFare ? "text-green-600 font-medium" : "text-gray-500"}`}>
+                  <span className="text-xs font-semibold leading-none">{day.getDate()}</span>
+                  <span className={`text-[9px] font-normal mt-0.5 leading-none ${isSelected ? "text-white/90" : lowFare ? "text-green-600 font-medium" : "text-gray-400"}`}>
                     {fare}
                   </span>
                 </button>
@@ -202,17 +206,17 @@ const CalendarComponent = ({
 
         {/* Right month */}
         <div className="flex-1">
-          <div className="flex items-center justify-center mb-5">
-            <span className="text-base font-bold text-red-600">{monthTitle(rightDate.getFullYear(), rightDate.getMonth())}</span>
+          <div className="flex items-center justify-center mb-3">
+            <span className="text-xs sm:text-sm font-bold text-red-600">{monthTitle(rightDate.getFullYear(), rightDate.getMonth())}</span>
           </div>
-          <div className="grid grid-cols-7 gap-x-3 gap-y-2">
+          <div className="grid grid-cols-7 gap-x-1 sm:gap-x-2 gap-y-1 sm:gap-y-1.5">
             {WEEKDAYS.map((w) => (
-              <div key={w} className="text-xs font-semibold text-gray-600 py-2 text-center">
+              <div key={w} className="text-[10px] font-semibold text-gray-500 py-1.5 text-center">
                 {w}
               </div>
             ))}
             {rightDays.map((day, i) => {
-              if (!day) return <div key={`r-e-${i}`} className="h-16" />;
+              if (!day) return <div key={`r-e-${i}`} className="h-10 sm:h-11" />;
               const key = toDateKey(day);
               const isSelected = isSameDay(day, dep) || isSameDay(day, ret);
               const inRange = isRoundTrip && dep && ret && isInRange(day, dep, ret) && !isSelected;
@@ -224,7 +228,7 @@ const CalendarComponent = ({
                   key={key}
                   type="button"
                   onClick={() => handleDateClick(day)}
-                  className={`relative h-16 flex flex-col items-center justify-center rounded-lg transition-colors ${
+                  className={`relative h-10 sm:h-11 flex flex-col items-center justify-center rounded-lg transition-colors ${
                     isSelected
                       ? "bg-blue-600 text-white hover:bg-blue-700"
                       : inRange
@@ -234,8 +238,8 @@ const CalendarComponent = ({
                       : "text-gray-900 hover:bg-gray-100"
                   }`}
                 >
-                  <span className="text-sm font-semibold">{day.getDate()}</span>
-                  <span className={`text-[10px] font-normal mt-0.5 ${isSelected ? "text-white/90" : lowFare ? "text-green-600 font-medium" : "text-gray-500"}`}>
+                  <span className="text-xs font-semibold leading-none">{day.getDate()}</span>
+                  <span className={`text-[9px] font-normal mt-0.5 leading-none ${isSelected ? "text-white/90" : lowFare ? "text-green-600 font-medium" : "text-gray-400"}`}>
                     {fare}
                   </span>
                 </button>
@@ -245,8 +249,8 @@ const CalendarComponent = ({
         </div>
       </div>
 
-      <div className="px-8 py-3 border-t border-gray-200 flex justify-end bg-gray-50">
-        <span className="text-xs font-medium text-red-600">* All fares are in INR</span>
+      <div className="px-4 sm:px-5 py-2 border-t border-gray-200 flex justify-end bg-white">
+        <span className="text-[10px] font-medium text-red-600">* All fares are in INR</span>
       </div>
     </div>
   );
