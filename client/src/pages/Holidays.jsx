@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getPackages, getFeaturedPackages, getHotDeals } from '../api/packageApi';
 import {
     FaSearch, FaMapMarkerAlt, FaCalendarAlt, FaRupeeSign, FaArrowRight,
@@ -7,12 +7,13 @@ import {
     FaCheck, FaPhone, FaShieldAlt, FaHeadset, FaTags, FaGlobe, FaUmbrellaBeach,
     FaMountain, FaCity, FaHotel, FaPassport, FaPlane
 } from 'react-icons/fa';
+import { useGlobal } from '../context/GlobalContext';
 
 // ─── Destination Data ──────────────────────────────────────────────────────
 const INTERNATIONAL_DESTINATIONS = [
     { name: 'Thailand', trips: '21+', price: 26115, image: 'https://images.unsplash.com/photo-1539367628448-4bc5c9d171c8?w=400', destination: 'Thailand' },
     { name: 'Singapore', trips: '19+', price: 27972, image: 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=400', destination: 'Singapore' },
-    { name: 'Dubai', trips: '11+', price: 23701, image: 'https://images.unsplash.com/photo-1512453979798-5ea90b798d5c?w=400', destination: 'Dubai' },
+    { name: 'Dubai', trips: '11+', price: 23701, image: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400', destination: 'Dubai' },
     { name: 'Bali', trips: '10+', price: 16670, image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=400', destination: 'Bali' },
     { name: 'Maldives', trips: '11+', price: 74880, image: 'https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=400', destination: 'Maldives' },
     { name: 'Vietnam', trips: '15+', price: 18824, image: 'https://images.unsplash.com/photo-1540611025311-01df3cef54b5?w=400', destination: 'Vietnam' },
@@ -23,12 +24,12 @@ const INTERNATIONAL_DESTINATIONS = [
 const DOMESTIC_DESTINATIONS = [
     { name: 'Kerala', trips: '20+', price: 12000, image: 'https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=400', destination: 'Kerala' },
     { name: 'Goa', trips: '15+', price: 8000, image: 'https://images.unsplash.com/photo-1614082242765-7c98ca0f3df3?w=400', destination: 'Goa' },
-    { name: 'Rajasthan', trips: '18+', price: 10000, image: 'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=400', destination: 'Rajasthan' },
+    { name: 'Rajasthan', trips: '18+', price: 10000, image: 'https://images.unsplash.com/photo-1477587458883-47145ed31db6?w=400', destination: 'Rajasthan' },
     { name: 'Manali', trips: '12+', price: 9000, image: 'https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=400', destination: 'Manali' },
-    { name: 'Andaman', trips: '8+', price: 15000, image: 'https://images.unsplash.com/photo-1540979388789-6cee28a1cdc9?w=400', destination: 'Andaman' },
-    { name: 'Leh Ladakh', trips: '6+', price: 20000, image: 'https://images.unsplash.com/photo-1617519637694-2f48b51c0e79?w=400', destination: 'Ladakh' },
-    { name: 'Darjeeling', trips: '10+', price: 11000, image: 'https://images.unsplash.com/photo-1580975167534-2a4e3d13b9a6?w=400', destination: 'Darjeeling' },
-    { name: 'Kashmir', trips: '14+', price: 16000, image: 'https://images.unsplash.com/photo-1568339434671-87d2b07a8fcd?w=400', destination: 'Kashmir' },
+    { name: 'Andaman', trips: '8+', price: 15000, image: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=400', destination: 'Andaman' },
+    { name: 'Leh Ladakh', trips: '6+', price: 20000, image: 'https://images.unsplash.com/photo-1566836610593-62a64888a251?w=400', destination: 'Ladakh' },
+    { name: 'Darjeeling', trips: '10+', price: 11000, image: 'https://images.unsplash.com/photo-1544761634-dc512f2238a3?w=400', destination: 'Darjeeling' },
+    { name: 'Kashmir', trips: '14+', price: 16000, image: 'https://images.unsplash.com/photo-1605649487212-47bdab064df7?w=400', destination: 'Kashmir' },
 ];
 
 // ─── Why Choose Us Data ────────────────────────────────────────────────────
@@ -44,6 +45,9 @@ const WHY_CHOOSE = [
 // ─── Main Component ────────────────────────────────────────────────────────
 const Holidays = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+    const searchExecuted = useRef(false);
+    const { formatPrice } = useGlobal();
     const [activeMainTab, setActiveMainTab] = useState('hot-deals');
     const [destTab, setDestTab] = useState('international');
     const [searchForm, setSearchForm] = useState({ destination: '', type: '', minPrice: '', maxPrice: '' });
@@ -74,7 +78,18 @@ const Holidays = () => {
             setDomesticPkgs(dom.packages || []);
             setIntlPkgs(intl.packages || []);
         }).catch(console.error).finally(() => { setLoading(false); setDataLoaded(true); });
-    }, []);
+
+        // Handle navigation state search
+        const { destination, type } = location.state || {};
+        if (destination && !searchExecuted.current) {
+            searchExecuted.current = true;
+            getPackages({ destination, type }).then(res => {
+                setSearchResults(res.packages || []);
+                setHasSearched(true);
+                tabRef.current?.scrollIntoView({ behavior: 'smooth' });
+            });
+        }
+    }, [location.state]);
 
     const handleSearch = async (e) => {
         e.preventDefault();
@@ -264,7 +279,7 @@ const Holidays = () => {
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
                                 <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
                                     <p className="font-bold text-base leading-tight">{dest.name}</p>
-                                    <p className="text-xs text-white/80">{dest.trips} Trips from ₹{dest.price.toLocaleString()}</p>
+                                    <p className="text-xs text-white/80">{dest.trips} Trips from {formatPrice(dest.price)}</p>
                                 </div>
                             </div>
                         ))}
@@ -470,59 +485,62 @@ const Holidays = () => {
 };
 
 // ─── Package Card Sub-component ────────────────────────────────────────────
-const PackageCard = ({ pkg, onClick }) => (
-    <div
-        onClick={onClick}
-        className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer group"
-    >
-        <div className="relative h-56 overflow-hidden">
-            <img
-                src={pkg.images?.[0] || 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=600'}
-                alt={pkg.title}
-                className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
-            />
-            {/* Strong bottom gradient so title is always readable */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+const PackageCard = ({ pkg, onClick }) => {
+    const { formatPrice } = useGlobal();
+    return (
+        <div
+            onClick={onClick}
+            className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer group"
+        >
+            <div className="relative h-56 overflow-hidden">
+                <img
+                    src={pkg.images?.[0] || 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=600'}
+                    alt={pkg.title}
+                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
+                />
+                {/* Strong bottom gradient so title is always readable */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
 
-            {/* Top badges */}
-            <div className="absolute top-3 left-3 flex gap-2">
-                {pkg.hotDeal && <span className="bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow">HOT DEAL</span>}
-                {pkg.featured && !pkg.hotDeal && <span className="bg-yellow-400 text-yellow-900 text-xs font-bold px-2.5 py-1 rounded-full shadow">FEATURED</span>}
-            </div>
-            <div className="absolute top-3 right-3 bg-black/50 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs font-bold text-white shadow">
-                {pkg.duration.days}D/{pkg.duration.nights}N
-            </div>
-
-            {/* Package name + destination at BOTTOM of image */}
-            <div className="absolute bottom-0 left-0 right-0 p-4">
-                <p className="text-white/75 text-xs flex items-center gap-1 mb-1">
-                    <FaMapMarkerAlt className="text-red-400 flex-shrink-0" /> {pkg.destination}, {pkg.country}
-                </p>
-                <h3 className="font-extrabold text-white text-base leading-snug drop-shadow-md line-clamp-2">
-                    {pkg.title}
-                </h3>
-            </div>
-        </div>
-
-        {/* Bottom card info */}
-        <div className="p-4">
-            <div className="flex flex-wrap gap-1.5 mb-3">
-                {(pkg.highlights || []).slice(0, 3).map((tag, i) => (
-                    <span key={i} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">{tag}</span>
-                ))}
-            </div>
-            <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                <div>
-                    <span className="text-gray-400 text-xs block">Starting from</span>
-                    <span className="text-2xl font-extrabold text-blue-600">₹{pkg.price.toLocaleString()}</span>
-                    <span className="text-xs text-gray-400"> / person</span>
+                {/* Top badges */}
+                <div className="absolute top-3 left-3 flex gap-2">
+                    {pkg.hotDeal && <span className="bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow">HOT DEAL</span>}
+                    {pkg.featured && !pkg.hotDeal && <span className="bg-yellow-400 text-yellow-900 text-xs font-bold px-2.5 py-1 rounded-full shadow">FEATURED</span>}
                 </div>
-                <button className="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-blue-700 transition-colors shadow">
-                    View Details
-                </button>
+                <div className="absolute top-3 right-3 bg-black/50 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs font-bold text-white shadow">
+                    {pkg.duration.days}D/{pkg.duration.nights}N
+                </div>
+
+                {/* Package name + destination at BOTTOM of image */}
+                <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <p className="text-white/75 text-xs flex items-center gap-1 mb-1">
+                        <FaMapMarkerAlt className="text-red-400 flex-shrink-0" /> {pkg.destination}, {pkg.country}
+                    </p>
+                    <h3 className="font-extrabold text-white text-base leading-snug drop-shadow-md line-clamp-2">
+                        {pkg.title}
+                    </h3>
+                </div>
+            </div>
+
+            {/* Bottom card info */}
+            <div className="p-4">
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                    {(pkg.highlights || []).slice(0, 3).map((tag, i) => (
+                        <span key={i} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">{tag}</span>
+                    ))}
+                </div>
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                    <div>
+                        <span className="text-gray-400 text-xs block">Starting from</span>
+                        <span className="text-2xl font-extrabold text-blue-600">{formatPrice(pkg.price)}</span>
+                        <span className="text-xs text-gray-400"> / person</span>
+                    </div>
+                    <button className="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-blue-700 transition-colors shadow">
+                        View Details
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 export default Holidays;

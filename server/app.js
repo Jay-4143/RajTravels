@@ -21,6 +21,9 @@ const bookingRoutes = require('./routes/bookingRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
+const autocompleteRoutes = require('./routes/autocompleteRoutes');
+const cruiseRoutes = require('./routes/cruiseRoutes');
+const cabRoutes = require('./routes/cabRoutes');
 
 const app = express();
 
@@ -45,7 +48,7 @@ app.use('/api/', limiter);
 // Stricter rate limit for auth endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 50,
   message: { success: false, message: 'Too many auth attempts, please try again later' }
 });
 app.use('/api/auth/login', authLimiter);
@@ -68,6 +71,9 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/autocomplete', autocompleteRoutes);
+app.use('/api/cruises', cruiseRoutes);
+app.use('/api/cabs', cabRoutes);
 
 // 404 handler
 app.use((req, res) => {

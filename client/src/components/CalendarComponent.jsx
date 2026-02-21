@@ -12,6 +12,8 @@ const isInRange = (day, start, end) => {
   return t >= start.getTime() && t <= end.getTime();
 };
 const isBefore = (a, b) => a && b && a.getTime() < b.getTime();
+const today = new Date(); today.setHours(0, 0, 0, 0);
+const isPast = (date) => date && date < today;
 
 // Mock fare for a date (deterministic from date string)
 const getFareForDate = (date) => {
@@ -71,7 +73,7 @@ const CalendarComponent = ({
   };
 
   const handleDateClick = (date) => {
-    if (!date) return;
+    if (!date || isPast(date)) return;
     const dateStr = toDateKey(date);
     if (activeField === "departure") {
       onSelectDeparture(dateStr);
@@ -174,6 +176,7 @@ const CalendarComponent = ({
             {leftDays.map((day, i) => {
               if (!day) return <div key={`l-e-${i}`} className="h-10 sm:h-11" />;
               const key = toDateKey(day);
+              const past = isPast(day);
               const isSelected = isSameDay(day, dep) || isSameDay(day, ret);
               const inRange = isRoundTrip && dep && ret && isInRange(day, dep, ret) && !isSelected;
               const isWeekend = day.getDay() === 0 || day.getDay() === 6;
@@ -184,19 +187,21 @@ const CalendarComponent = ({
                   key={key}
                   type="button"
                   onClick={() => handleDateClick(day)}
-                  className={`relative h-10 sm:h-11 flex flex-col items-center justify-center rounded-lg transition-colors ${
-                    isSelected
-                      ? "bg-blue-600 text-white hover:bg-blue-700"
-                      : inRange
-                      ? "bg-blue-100 text-blue-900 hover:bg-blue-200"
-                      : isWeekend
-                      ? "text-red-600 hover:bg-red-50"
-                      : "text-gray-900 hover:bg-gray-100"
-                  }`}
+                  disabled={past}
+                  className={`relative h-10 sm:h-11 flex flex-col items-center justify-center rounded-lg transition-colors ${past
+                      ? "text-gray-300 cursor-not-allowed"
+                      : isSelected
+                        ? "bg-blue-600 text-white hover:bg-blue-700"
+                        : inRange
+                          ? "bg-blue-100 text-blue-900 hover:bg-blue-200"
+                          : isWeekend
+                            ? "text-red-600 hover:bg-red-50"
+                            : "text-gray-900 hover:bg-gray-100"
+                    }`}
                 >
                   <span className="text-xs font-semibold leading-none">{day.getDate()}</span>
-                  <span className={`text-[9px] font-normal mt-0.5 leading-none ${isSelected ? "text-white/90" : lowFare ? "text-green-600 font-medium" : "text-gray-400"}`}>
-                    {fare}
+                  <span className={`text-[9px] font-normal mt-0.5 leading-none ${past ? "text-gray-300" : isSelected ? "text-white/90" : lowFare ? "text-green-600 font-medium" : "text-gray-400"}`}>
+                    {past ? "—" : fare}
                   </span>
                 </button>
               );
@@ -218,6 +223,7 @@ const CalendarComponent = ({
             {rightDays.map((day, i) => {
               if (!day) return <div key={`r-e-${i}`} className="h-10 sm:h-11" />;
               const key = toDateKey(day);
+              const past = isPast(day);
               const isSelected = isSameDay(day, dep) || isSameDay(day, ret);
               const inRange = isRoundTrip && dep && ret && isInRange(day, dep, ret) && !isSelected;
               const isWeekend = day.getDay() === 0 || day.getDay() === 6;
@@ -228,19 +234,21 @@ const CalendarComponent = ({
                   key={key}
                   type="button"
                   onClick={() => handleDateClick(day)}
-                  className={`relative h-10 sm:h-11 flex flex-col items-center justify-center rounded-lg transition-colors ${
-                    isSelected
-                      ? "bg-blue-600 text-white hover:bg-blue-700"
-                      : inRange
-                      ? "bg-blue-100 text-blue-900 hover:bg-blue-200"
-                      : isWeekend
-                      ? "text-red-600 hover:bg-red-50"
-                      : "text-gray-900 hover:bg-gray-100"
-                  }`}
+                  disabled={past}
+                  className={`relative h-10 sm:h-11 flex flex-col items-center justify-center rounded-lg transition-colors ${past
+                      ? "text-gray-300 cursor-not-allowed"
+                      : isSelected
+                        ? "bg-blue-600 text-white hover:bg-blue-700"
+                        : inRange
+                          ? "bg-blue-100 text-blue-900 hover:bg-blue-200"
+                          : isWeekend
+                            ? "text-red-600 hover:bg-red-50"
+                            : "text-gray-900 hover:bg-gray-100"
+                    }`}
                 >
                   <span className="text-xs font-semibold leading-none">{day.getDate()}</span>
-                  <span className={`text-[9px] font-normal mt-0.5 leading-none ${isSelected ? "text-white/90" : lowFare ? "text-green-600 font-medium" : "text-gray-400"}`}>
-                    {fare}
+                  <span className={`text-[9px] font-normal mt-0.5 leading-none ${past ? "text-gray-300" : isSelected ? "text-white/90" : lowFare ? "text-green-600 font-medium" : "text-gray-400"}`}>
+                    {past ? "—" : fare}
                   </span>
                 </button>
               );

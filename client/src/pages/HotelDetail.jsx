@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { getHotelById, getRoomAvailability } from "../api/hotels";
+import HotelMapView from "../components/HotelMapView";
+import { useGlobal } from "../context/GlobalContext";
+import HotelGuestReviews from "../components/HotelGuestReviews";
 
 const HotelDetail = () => {
   const { id } = useParams();
@@ -11,6 +14,7 @@ const HotelDetail = () => {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { formatPrice } = useGlobal();
   const [galleryIndex, setGalleryIndex] = useState(0);
 
   useEffect(() => {
@@ -75,11 +79,11 @@ const HotelDetail = () => {
   const images = hotel.images?.length
     ? hotel.images
     : [
-        "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
-        "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800",
-        "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800",
-        "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=800",
-      ];
+      "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
+      "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800",
+      "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800",
+      "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=800",
+    ];
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -92,6 +96,7 @@ const HotelDetail = () => {
           ← Back to Hotels
         </button>
 
+        {/* ── Image Gallery ── */}
         <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
           <div className="relative h-64 md:h-96 bg-gray-200">
             <img src={images[galleryIndex]} alt={hotel.name} className="w-full h-full object-cover" />
@@ -153,7 +158,15 @@ const HotelDetail = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-6">
+        {/* ── Location Map ── */}
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6 p-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-1">Location</h2>
+          <p className="text-gray-500 text-sm mb-4">{hotel.address || hotel.city}</p>
+          <HotelMapView hotel={hotel} />
+        </div>
+
+        {/* ── Available Rooms ── */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Available Rooms</h2>
           {rooms.length === 0 ? (
             <p className="text-gray-600">No rooms available for selected dates.</p>
@@ -162,7 +175,7 @@ const HotelDetail = () => {
               {rooms.map((room) => (
                 <div
                   key={room._id}
-                  className={`border rounded-lg p-4 ${selectedRoom?._id === room._id ? "border-red-500 bg-red-50" : "border-gray-200"}`}
+                  className="border rounded-lg p-4 border-gray-200 hover:border-red-300 transition-colors"
                 >
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div className="flex-1">
@@ -187,22 +200,21 @@ const HotelDetail = () => {
                       )}
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold text-gray-900">₹{room.pricePerNight?.toLocaleString()}</p>
+                      <p className="text-2xl font-bold text-gray-900">{formatPrice(room.pricePerNight)}</p>
                       <p className="text-sm text-gray-500">per night</p>
                       {searchParams?.checkIn && searchParams?.checkOut && room.totalPrice && (
                         <p className="text-sm text-gray-600 mt-1">
-                          Total: ₹{room.totalPrice.toLocaleString()}
+                          Total: {formatPrice(room.totalPrice)}
                         </p>
                       )}
                       <button
                         type="button"
                         onClick={() => handleBook(room)}
                         disabled={!room.available || room.available < 1}
-                        className={`mt-3 px-6 py-2.5 rounded-lg font-semibold transition-colors ${
-                          room.available && room.available >= 1
-                            ? "bg-red-500 hover:bg-red-600 text-white"
-                            : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        }`}
+                        className={`mt-3 px-6 py-2.5 rounded-lg font-semibold transition-colors ${room.available && room.available >= 1
+                          ? "bg-red-500 hover:bg-red-600 text-white"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                          }`}
                       >
                         {room.available && room.available >= 1 ? "Book Now" : "Not Available"}
                       </button>
@@ -213,9 +225,15 @@ const HotelDetail = () => {
             </div>
           )}
         </div>
+
+        {/* ── Guest Reviews ── */}
+        <HotelGuestReviews hotelId={id} hotelRating={hotel.rating} reviewCount={hotel.reviewCount} />
       </div>
     </div>
   );
 };
 
 export default HotelDetail;
+
+
+

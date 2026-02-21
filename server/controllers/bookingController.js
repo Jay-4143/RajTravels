@@ -26,11 +26,29 @@ const generateBookingRef = () => {
  */
 exports.createFlightBooking = async (req, res, next) => {
   try {
-    const { flightId, returnFlightId, passengers, seats, tripType } = req.body;
+    const {
+      flightId,
+      returnFlightId,
+      passengers,
+      seats,
+      tripType,
+      flightDetails: externalDetails,
+      addons = []
+    } = req.body;
 
-    const flight = await Flight.findById(flightId);
+    let flight = null;
+    let isExternal = !mongoose.Types.ObjectId.isValid(flightId);
+
+    if (isExternal) {
+      flight = externalDetails;
+    } else {
+      flight = await Flight.findById(flightId);
+    }
+
     if (!flight) return res.status(404).json({ success: false, message: 'Flight not found' });
-    if (flight.seatsAvailable < (passengers?.length || 1)) {
+
+    // Check seats only for local flights
+    if (!isExternal && flight.seatsAvailable < (passengers?.length || 1)) {
       return res.status(400).json({ success: false, message: 'Not enough seats available' });
     }
 
@@ -38,26 +56,31 @@ exports.createFlightBooking = async (req, res, next) => {
     const passengerList = passengers || [{ name: req.user.name }];
     const taxPercent = 0.18;
     const baseFare = flight.price * passengerList.length;
-    totalAmount = baseFare + Math.round(baseFare * taxPercent) + 199 * passengerList.length;
 
-    let returnFlight = null;
-    if (tripType === 'round-trip' && returnFlightId) {
-      returnFlight = await Flight.findById(returnFlightId);
-      if (returnFlight) {
-        const returnBase = returnFlight.price * passengerList.length;
-        totalAmount += returnBase + Math.round(returnBase * taxPercent) + 199 * passengerList.length;
-      }
+    // Add-on calculation
+    const addOnTotal = addons.reduce((sum, item) => sum + (item.price || 0), 0);
+
+    // Seat premium (simple logic: window/aisle might cost more)
+    let seatPremium = 0;
+    if (seats && Array.isArray(seats)) {
+      seats.forEach(s => {
+        if (s.includes('A') || s.includes('F')) seatPremium += 499; // Window
+        else if (s.includes('C') || s.includes('D')) seatPremium += 299; // Aisle
+      });
     }
+
+    totalAmount = baseFare + seatPremium + addOnTotal;
+    const taxAmount = Math.round(totalAmount * taxPercent);
+    const convenienceFee = 199 * passengerList.length;
+    totalAmount += taxAmount + convenienceFee;
 
     let ref = generateBookingRef();
     while (await Booking.findOne({ bookingReference: ref })) ref = generateBookingRef();
 
-    const booking = await Booking.create({
-      user: req.user.id,
+    const bookingData = {
+      user: req.user.id || req.user._id || req.user.user?._id,
       bookingType: 'flight',
       bookingReference: ref,
-      flight: flightId,
-      returnFlight: returnFlight?._id,
       passengers: passengerList.map((p, i) => ({
         name: p.name || `Passenger ${i + 1}`,
         age: p.age,
@@ -66,15 +89,29 @@ exports.createFlightBooking = async (req, res, next) => {
       seats: seats || [],
       tripType: tripType || 'one-way',
       totalAmount,
-      taxAmount: Math.round(baseFare * taxPercent),
-      convenienceFee: 199 * passengerList.length,
+      taxAmount,
+      convenienceFee,
       status: 'pending',
-    });
+      flightDetails: isExternal ? flight : undefined,
+      addons: addons
+    };
 
-    // Reduce seats
-    await Flight.findByIdAndUpdate(flightId, { $inc: { seatsAvailable: -passengerList.length } });
-    if (returnFlight) {
-      await Flight.findByIdAndUpdate(returnFlightId, { $inc: { seatsAvailable: -passengerList.length } });
+    if (isExternal) {
+      bookingData.externalFlightId = flightId;
+      if (returnFlightId) bookingData.externalReturnFlightId = returnFlightId;
+    } else {
+      bookingData.flight = flightId;
+      if (returnFlightId) bookingData.returnFlight = returnFlightId;
+    }
+
+    const booking = await Booking.create(bookingData);
+
+    // Reduce seats for local flights
+    if (!isExternal) {
+      await Flight.findByIdAndUpdate(flightId, { $inc: { seatsAvailable: -passengerList.length } });
+      if (returnFlightId && mongoose.Types.ObjectId.isValid(returnFlightId)) {
+        await Flight.findByIdAndUpdate(returnFlightId, { $inc: { seatsAvailable: -passengerList.length } });
+      }
     }
 
     res.status(201).json({
@@ -116,7 +153,7 @@ exports.createHotelBooking = async (req, res, next) => {
     while (await Booking.findOne({ bookingReference: ref })) ref = generateBookingRef();
 
     const booking = await Booking.create({
-      user: req.user.id,
+      user: req.user.id || req.user._id || req.user.user?._id,
       bookingType: 'hotel',
       bookingReference: ref,
       hotel: hotelId,
@@ -165,7 +202,7 @@ exports.createPackageBooking = async (req, res, next) => {
     while (await Booking.findOne({ bookingReference: ref })) ref = generateBookingRef();
 
     const booking = await Booking.create({
-      user: req.user.id,
+      user: req.user.id || req.user._id || req.user.user?._id,
       bookingType: 'package',
       bookingReference: ref,
       package: packageId,
@@ -190,6 +227,10 @@ exports.createPackageBooking = async (req, res, next) => {
   }
 };
 
+const BusBooking = require('../models/busBooking');
+const CruiseBooking = require('../models/cruiseBooking');
+const CabBooking = require('../models/cabBooking');
+
 /**
  * @desc    Get user's booking history
  * @route   GET /api/bookings
@@ -198,26 +239,144 @@ exports.createPackageBooking = async (req, res, next) => {
 exports.getMyBookings = async (req, res, next) => {
   try {
     const { type, status, page = 1, limit = 20 } = req.query;
-    const query = { user: req.user.id };
-    if (type) query.bookingType = type;
+    const userId = req.user.id || req.user._id || req.user.user?._id;
+    const query = { user: userId };
     if (status) query.status = status;
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const bookings = await Booking.find(query)
-      .populate('flight', 'airline from to departureTime price')
-      .populate('hotel', 'name city')
-      .populate('room', 'name pricePerNight')
-      .populate('package', 'title destination price')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .lean();
+    let bookings = [];
+    let total = 0;
 
-    const total = await Booking.countDocuments(query);
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const fetchLimit = parseInt(limit);
+
+    if (!type || type === 'all' || ['flight', 'hotel', 'package'].includes(type)) {
+      const bQuery = { ...query };
+      if (type && type !== 'all') bQuery.bookingType = type;
+
+      const mainBookings = await Booking.find(bQuery)
+        .populate('flight', 'airline from to departureTime price')
+        .populate('hotel', 'name city')
+        .populate('room', 'name pricePerNight')
+        .populate('package', 'title destination price')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(fetchLimit)
+        .lean();
+
+      bookings = mainBookings.map(b => {
+        let title = '';
+        let subtitle = '';
+        if (b.bookingType === 'flight' && b.flight) {
+          title = `${b.flight.from} → ${b.flight.to}`;
+          subtitle = `${b.flight.airline} • ${b.tripType === 'round-trip' ? 'Round Trip' : 'One Way'}`;
+        } else if (b.bookingType === 'hotel' && b.hotel) {
+          title = b.hotel.name;
+          subtitle = `${b.hotel.city} • ${b.room?.name || 'Room'}`;
+        } else if (b.bookingType === 'package' && b.package) {
+          title = b.package.title;
+          subtitle = `${b.package.destination} • ${b.packageParticipants} Guests`;
+        }
+        return {
+          ...b,
+          id: b._id,
+          title: title || 'Booking',
+          subtitle: subtitle || 'Details'
+        };
+      });
+      total = await Booking.countDocuments(bQuery);
+    }
+
+    if (!type || type === 'all' || type === 'bus') {
+      const busBookings = await BusBooking.find(query)
+        .populate('bus', 'busName operatorName busType')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(fetchLimit)
+        .lean();
+
+      const busMapped = busBookings.map(b => ({
+        ...b,
+        id: b._id,
+        bookingType: 'bus',
+        title: `${b.from} → ${b.to}`,
+        subtitle: `${b.bus?.busName || 'Bus'} • Seat ${b.passengers?.[0]?.seatNumber || ''}`,
+        totalAmount: b.totalFare,
+        date: b.travelDate,
+      }));
+
+      if (type === 'bus') {
+        bookings = busMapped;
+        total = await BusBooking.countDocuments(query);
+      } else {
+        bookings = [...bookings, ...busMapped].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, fetchLimit);
+        total += await BusBooking.countDocuments(query);
+      }
+    }
+
+    if (!type || type === 'all' || type === 'cruise') {
+      const cruiseBookings = await CruiseBooking.find(query)
+        .populate('cruise', 'name operator departurePort arrivalPort')
+        .populate('cabin', 'name type')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(fetchLimit)
+        .lean();
+
+      const cruiseMapped = cruiseBookings.map(b => ({
+        ...b,
+        id: b._id,
+        bookingType: 'cruise',
+        title: b.cruise ? `${b.cruise.departurePort} → ${b.cruise.arrivalPort}` : 'Cruise Booking',
+        subtitle: b.cruise ? `${b.cruise.name} • ${b.cabin?.name || 'Cabin'}` : 'Cruise details',
+        totalAmount: b.totalAmount,
+        date: b.travelDate,
+      }));
+
+      if (type === 'cruise') {
+        bookings = cruiseMapped;
+        total = await CruiseBooking.countDocuments(query);
+      } else {
+        bookings = [...bookings, ...cruiseMapped].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, fetchLimit);
+        total += await CruiseBooking.countDocuments(query);
+      }
+    }
+
+    if (!type || type === 'all' || type === 'cab') {
+      const cabBookings = await CabBooking.find(query)
+        .populate('cab', 'vehicleName vehicleType operator')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(fetchLimit)
+        .lean();
+
+      const cabMapped = cabBookings.map(b => ({
+        ...b,
+        id: b._id,
+        bookingType: 'cab',
+        title: `${b.pickupAddress} → ${b.dropAddress}`,
+        subtitle: b.cab ? `${b.cab.vehicleName} (${b.cab.vehicleType})` : 'Cab booking',
+        totalAmount: b.totalAmount,
+        date: b.pickupDate,
+      }));
+
+      if (type === 'cab') {
+        bookings = cabMapped;
+        total = await CabBooking.countDocuments(query);
+      } else {
+        bookings = [...bookings, ...cabMapped].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, fetchLimit);
+        total += await CabBooking.countDocuments(query);
+      }
+    }
+
     res.json({
       success: true,
       bookings,
-      pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) },
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      },
     });
   } catch (error) {
     next(error);

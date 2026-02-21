@@ -9,7 +9,7 @@ const BusBooking = require('../models/busBooking');
  * @desc  Search buses by source, destination, date
  * @route GET /api/buses/search
  */
-exports.searchBuses = async (req, res, next) => {
+exports.searchBuses = async (req, res) => {
     try {
         const { from, to, date, busType, minPrice, maxPrice, sort = 'price', order = 'asc' } = req.query;
 
@@ -46,7 +46,7 @@ exports.searchBuses = async (req, res, next) => {
 
         res.json({ success: true, count: buses.length, buses });
     } catch (error) {
-        next(error);
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
@@ -54,13 +54,13 @@ exports.searchBuses = async (req, res, next) => {
  * @desc  Get bus by ID with seat map
  * @route GET /api/buses/:id
  */
-exports.getBusById = async (req, res, next) => {
+exports.getBusById = async (req, res) => {
     try {
         const bus = await Bus.findById(req.params.id);
         if (!bus) return res.status(404).json({ success: false, message: 'Bus not found' });
         res.json({ success: true, bus });
     } catch (error) {
-        next(error);
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
@@ -68,14 +68,14 @@ exports.getBusById = async (req, res, next) => {
  * @desc  Get available cities (distinct from/to values)
  * @route GET /api/buses/cities
  */
-exports.getCities = async (req, res, next) => {
+exports.getCities = async (req, res) => {
     try {
         const fromCities = await Bus.distinct('from');
         const toCities = await Bus.distinct('to');
         const cities = [...new Set([...fromCities, ...toCities])].sort();
         res.json({ success: true, cities });
     } catch (error) {
-        next(error);
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
@@ -83,7 +83,7 @@ exports.getCities = async (req, res, next) => {
  * @desc  Book a bus
  * @route POST /api/buses/book
  */
-exports.bookBus = async (req, res, next) => {
+exports.bookBus = async (req, res) => {
     try {
         const { busId, passengerName, passengerEmail, passengerPhone, passengers } = req.body;
 
@@ -114,9 +114,11 @@ exports.bookBus = async (req, res, next) => {
 
         const totalFare = bus.price * passengers.length;
 
+        const userId = req.user?.id || req.user?._id || req.user?.user?._id;
+
         const booking = await BusBooking.create({
             bus: bus._id,
-            user: req.user?.id,
+            user: userId,
             passengerName,
             passengerEmail,
             passengerPhone,
@@ -149,7 +151,7 @@ exports.bookBus = async (req, res, next) => {
             },
         });
     } catch (error) {
-        next(error);
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
@@ -157,12 +159,13 @@ exports.bookBus = async (req, res, next) => {
  * @desc  Get bookings for logged-in user
  * @route GET /api/buses/my-bookings
  */
-exports.getMyBookings = async (req, res, next) => {
+exports.getMyBookings = async (req, res) => {
     try {
-        const bookings = await BusBooking.find({ user: req.user.id }).populate('bus', 'busName operatorName busType').sort({ createdAt: -1 });
+        const userId = req.user?.id || req.user?._id || req.user?.user?._id;
+        const bookings = await BusBooking.find({ user: userId }).populate('bus', 'busName operatorName busType').sort({ createdAt: -1 });
         res.json({ success: true, bookings });
     } catch (error) {
-        next(error);
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
@@ -170,11 +173,12 @@ exports.getMyBookings = async (req, res, next) => {
  * @desc  Cancel a booking
  * @route PUT /api/buses/bookings/:bookingId/cancel
  */
-exports.cancelBooking = async (req, res, next) => {
+exports.cancelBooking = async (req, res) => {
     try {
         const booking = await BusBooking.findById(req.params.bookingId).populate('bus');
         if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
-        if (booking.user?.toString() !== req.user.id) return res.status(403).json({ success: false, message: 'Not authorized' });
+        const userId = req.user?.id || req.user?._id || req.user?.user?._id;
+        if (booking.user?.toString() !== userId?.toString()) return res.status(403).json({ success: false, message: 'Not authorized' });
         if (booking.status === 'cancelled') return res.status(400).json({ success: false, message: 'Booking already cancelled' });
 
         booking.status = 'cancelled';
@@ -194,6 +198,6 @@ exports.cancelBooking = async (req, res, next) => {
 
         res.json({ success: true, message: 'Booking cancelled successfully' });
     } catch (error) {
-        next(error);
+        res.status(500).json({ success: false, message: error.message });
     }
 };

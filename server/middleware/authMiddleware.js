@@ -28,7 +28,11 @@ const protect = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = { id: decoded.id, role: decoded.role || 'user' };
+
+    // Extract ID from any common field
+    const userId = decoded.id || decoded._id || decoded.sub;
+
+    req.user = { id: userId, role: decoded.role || 'user' };
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {

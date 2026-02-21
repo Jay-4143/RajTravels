@@ -1,157 +1,72 @@
-/**
- * Seed script for hotels and rooms
- * Run: node scripts/seedHotels.js (from server directory, with MongoDB running)
- */
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const mongoose = require('mongoose');
 const Hotel = require('../models/hotel');
 const Room = require('../models/room');
 
 const hotels = [
-  {
-    name: 'Grand Mumbai Palace',
-    description: 'Luxurious 5-star hotel in the heart of Mumbai with stunning city views.',
-    city: 'Mumbai',
-    address: '123 Marine Drive, Mumbai 400020',
-    rating: 4.8,
-    reviewCount: 1250,
-    amenities: ['WiFi', 'Swimming Pool', 'Gym', 'Spa', 'Restaurant', 'Bar', 'Parking', 'Room Service'],
-    images: [
-      'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800',
-      'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800',
-    ],
-    starCategory: 5,
-    freeCancellation: true,
-    propertyType: 'Hotel',
-    isActive: true,
-  },
-  {
-    name: 'Taj Gateway Goa',
-    description: 'Beachfront resort with direct access to pristine sands.',
-    city: 'Goa',
-    address: 'Candolim Beach, Goa 403515',
-    rating: 4.7,
-    reviewCount: 890,
-    amenities: ['WiFi', 'Swimming Pool', 'Beach Access', 'Restaurant', 'Bar', 'Spa'],
-    images: ['https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800'],
-    starCategory: 5,
-    freeCancellation: true,
-    propertyType: 'Resort',
-    isActive: true,
-  },
-  {
-    name: 'Royal Jaipur Inn',
-    description: 'Heritage property with traditional Rajasthani hospitality.',
-    city: 'Jaipur',
-    address: 'MI Road, Jaipur 302001',
-    rating: 4.5,
-    reviewCount: 654,
-    amenities: ['WiFi', 'Restaurant', 'Parking', 'Room Service', 'Laundry'],
-    images: ['https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=800'],
-    starCategory: 4,
-    freeCancellation: false,
-    propertyType: 'Hotel',
-    isActive: true,
-  },
-  {
-    name: 'Shimla Heights Resort',
-    description: 'Mountain resort with panoramic Himalayan views.',
-    city: 'Shimla',
-    address: 'The Mall, Shimla 171001',
-    rating: 4.6,
-    reviewCount: 432,
-    amenities: ['WiFi', 'Restaurant', 'Parking', 'Mountain View', 'Room Service'],
-    images: ['https://images.unsplash.com/photo-1548013146-72479768bada?w=800'],
-    starCategory: 4,
-    freeCancellation: true,
-    propertyType: 'Resort',
-    isActive: true,
-  },
-  {
-    name: 'Ooty Lake View Hotel',
-    description: 'Cozy hotel overlooking Ooty Lake in the Nilgiris.',
-    city: 'Ooty',
-    address: 'Lake Road, Ooty 643001',
-    rating: 4.4,
-    reviewCount: 567,
-    amenities: ['WiFi', 'Restaurant', 'Parking', 'Room Service'],
-    images: ['https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800'],
-    starCategory: 3,
-    freeCancellation: true,
-    propertyType: 'Hotel',
-    isActive: true,
-  },
-  {
-    name: 'New Delhi Central',
-    description: 'Modern hotel near Connaught Place with easy metro access.',
-    city: 'New Delhi',
-    address: 'Connaught Place, New Delhi 110001',
-    rating: 4.6,
-    reviewCount: 2100,
-    amenities: ['WiFi', 'Gym', 'Restaurant', 'Bar', 'Parking', 'Business Center'],
-    images: ['https://images.unsplash.com/photo-1587474260584-136574528ed5?w=800'],
-    starCategory: 4,
-    freeCancellation: true,
-    propertyType: 'Hotel',
-    isActive: true,
-  },
-  {
-    name: 'Bangalore Tech Park Hotel',
-    description: 'Business hotel near IT hubs with excellent connectivity.',
-    city: 'Bangalore',
-    address: 'Whitefield, Bangalore 560066',
-    rating: 4.5,
-    reviewCount: 780,
-    amenities: ['WiFi', 'Gym', 'Restaurant', 'Business Center', 'Parking'],
-    images: ['https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=800'],
-    starCategory: 4,
-    freeCancellation: true,
-    propertyType: 'Hotel',
-    isActive: true,
-  },
-  {
-    name: 'Chennai Bay Resort',
-    description: 'Seaside hotel with stunning Bay of Bengal views.',
-    city: 'Chennai',
-    address: 'East Coast Road, Chennai 600041',
-    rating: 4.4,
-    reviewCount: 445,
-    amenities: ['WiFi', 'Swimming Pool', 'Restaurant', 'Beach Access', 'Parking'],
-    images: ['https://images.unsplash.com/photo-1596178060812-6b8c19e28a56?w=800'],
-    starCategory: 4,
-    freeCancellation: false,
-    propertyType: 'Resort',
-    isActive: true,
-  },
+  { name: 'Grand Mumbai Palace', description: 'Luxurious 5-star hotel with stunning Arabian Sea views and world-class dining.', city: 'Mumbai', address: '123 Marine Drive, Mumbai 400020', location: { lat: 18.9388, lng: 72.8354 }, rating: 4.8, reviewCount: 1250, amenities: ['WiFi', 'Pool', 'Gym', 'Spa', 'Restaurant', 'Bar', 'Parking', 'Room Service'], images: ['https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Hotel', chainName: 'Marriott' },
+  { name: 'The Oberoi Mumbai', description: 'Iconic luxury hotel overlooking the Gateway of India with impeccable service.', city: 'Mumbai', address: 'Nariman Point, Mumbai 400021', location: { lat: 18.9256, lng: 72.8242 }, rating: 4.9, reviewCount: 980, amenities: ['WiFi', 'Pool', 'Gym', 'Spa', 'Restaurant', 'Bar', 'Concierge', 'Airport Shuttle'], images: ['https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Hotel', chainName: 'Oberoi' },
+  { name: 'Mumbai Central Inn', description: 'Affordable business hotel near railway station with modern amenities.', city: 'Mumbai', address: '45 Mumbai Central, Mumbai 400008', location: { lat: 18.9696, lng: 72.8194 }, rating: 3.8, reviewCount: 420, amenities: ['WiFi', 'Restaurant', 'Parking', 'Laundry'], images: ['https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800'], starCategory: 3, freeCancellation: false, propertyType: 'Hotel' },
+  { name: 'Taj Gateway Goa', description: 'Beachfront resort with private beach access and tropical gardens.', city: 'Goa', address: 'Calangute Beach Rd, Goa 403516', location: { lat: 15.5449, lng: 73.7553 }, rating: 4.6, reviewCount: 890, amenities: ['WiFi', 'Pool', 'Beach Access', 'Spa', 'Restaurant', 'Bar', 'Water Sports'], images: ['https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Resort', chainName: 'Taj' },
+  { name: 'Goa Beach Shack Resort', description: 'Charming beachside property with hammocks and sunset views.', city: 'Goa', address: 'Anjuna Beach, Goa 403509', location: { lat: 15.5735, lng: 73.7413 }, rating: 4.2, reviewCount: 560, amenities: ['WiFi', 'Beach Access', 'Restaurant', 'Bar', 'Yoga'], images: ['https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800'], starCategory: 3, freeCancellation: true, propertyType: 'Resort' },
+  { name: 'Rambagh Palace Jaipur', description: 'Former royal residence converted into a heritage luxury hotel.', city: 'Jaipur', address: 'Bhawani Singh Rd, Jaipur 302005', location: { lat: 26.8985, lng: 75.8054 }, rating: 4.9, reviewCount: 1100, amenities: ['WiFi', 'Pool', 'Spa', 'Restaurant', 'Heritage Walk', 'Golf', 'Concierge'], images: ['https://images.unsplash.com/photo-1506461883276-594a12b11cf3?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Heritage Hotel', chainName: 'Taj' },
+  { name: 'The Imperial New Delhi', description: 'Grand colonial-era hotel on Janpath with art deco interiors.', city: 'New Delhi', address: 'Janpath, New Delhi 110001', location: { lat: 28.6263, lng: 77.2178 }, rating: 4.7, reviewCount: 1450, amenities: ['WiFi', 'Pool', 'Gym', 'Spa', 'Restaurant', 'Bar', 'Concierge', 'Business Center'], images: ['https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Hotel' },
+  { name: 'ITC Grand Chola Chennai', description: 'Palatial luxury hotel inspired by Chola dynasty architecture.', city: 'Chennai', address: 'Mount Rd, Guindy, Chennai 600032', location: { lat: 13.0105, lng: 80.2209 }, rating: 4.8, reviewCount: 920, amenities: ['WiFi', 'Pool', 'Gym', 'Spa', 'Restaurant', 'Bar', 'Business Center'], images: ['https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Hotel', chainName: 'Accor' },
+  { name: 'Radisson Blu Udaipur', description: 'Lakeside palace resort with traditional architecture and modern luxury.', city: 'Udaipur', address: 'Near Fateh Sagar Lake, Udaipur 313001', location: { lat: 24.5937, lng: 73.6834 }, rating: 4.6, reviewCount: 840, amenities: ['WiFi', 'Pool', 'Lake View', 'Spa', 'Restaurant', 'Bar'], images: ['https://images.unsplash.com/photo-1621210137536-ea31b09b555e?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Resort', chainName: 'Radisson' },
+  { name: 'Leela Palace Bangalore', description: 'Award-winning luxury hotel with lush gardens in the IT capital.', city: 'Bangalore', address: '23 HAL Airport Rd, Bangalore 560008', location: { lat: 12.9611, lng: 77.6472 }, rating: 4.7, reviewCount: 1050, amenities: ['WiFi', 'Pool', 'Gym', 'Spa', 'Restaurant', 'Bar', 'Golf', 'Concierge'], images: ['https://images.unsplash.com/photo-1590073242678-70ee3fc28e8e?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Hotel' },
+  { name: 'Hyatt Regency Ahmedabad', description: 'Modern luxury hotel in the heart of the city near Sabarmati Riverfront.', city: 'Ahmedabad', address: 'Ashram Road, Ahmedabad 380014', location: { lat: 23.0396, lng: 72.5714 }, rating: 4.5, reviewCount: 720, amenities: ['WiFi', 'Pool', 'Gym', 'Restaurant', 'Business Center'], images: ['https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Hotel', chainName: 'Hyatt' },
+  { name: 'Hilton Jaipur', description: 'Elegant luxury hotel with stunning views of the Aravalli hills.', city: 'Jaipur', address: '42 Geejgarh House, Jaipur 302006', location: { lat: 26.9067, lng: 75.7797 }, rating: 4.6, reviewCount: 680, amenities: ['WiFi', 'Pool', 'Gym', 'Spa', 'Restaurant', 'Bar'], images: ['https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Hotel', chainName: 'Hilton' },
+  { name: 'Marine Plaza Mumbai', description: 'Boutique hotel with panoramic views of the Queens Necklace.', city: 'Mumbai', address: '29 Marine Drive, Mumbai 400020', location: { lat: 18.9322, lng: 72.8228 }, rating: 4.4, reviewCount: 540, amenities: ['WiFi', 'Pool', 'Restaurant', 'Sea View'], images: ['https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800'], starCategory: 4, freeCancellation: true, propertyType: 'Hotel' },
+  { name: 'Sea Green Hotel', description: 'Value for money hotel on Marine Drive with basic comforts.', city: 'Mumbai', address: '145 Marine Drive, Mumbai 400020', location: { lat: 18.9400, lng: 72.8300 }, rating: 3.5, reviewCount: 310, amenities: ['WiFi', 'AC', 'Restaurant'], images: ['https://images.unsplash.com/photo-1445019980597-93fa8acb246c?w=800'], starCategory: 3, freeCancellation: false, propertyType: 'Hotel' },
+  { name: 'JW Marriott Sahar', description: 'Sophisticated hotel near Mumbai International Airport.', city: 'Mumbai', address: 'IA Project Road, Sahar, Mumbai 400099', location: { lat: 19.0965, lng: 72.8748 }, rating: 4.7, reviewCount: 1560, amenities: ['WiFi', 'Pool', 'Gym', 'Spa', 'Airport Shuttle'], images: ['https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Hotel', chainName: 'Marriott' },
+  { name: 'Novotel Mumbai Juhu Beach', description: 'Beachfront hotel in the lively Juhu area with sea facing rooms.', city: 'Mumbai', address: 'Balraj Sahani Marg, Juhu, Mumbai 400049', location: { lat: 19.1171, lng: 72.8258 }, rating: 4.3, reviewCount: 890, amenities: ['WiFi', 'Pool', 'Beach View', 'Restaurant'], images: ['https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?w=800'], starCategory: 4, freeCancellation: true, propertyType: 'Hotel' },
+  { name: 'Holiday Inn Mumbai International Airport', description: 'Modern hotel with rooftop pool near the airport and metro station.', city: 'Mumbai', address: 'Sakinaka Junction, Mumbai 400072', location: { lat: 19.1065, lng: 72.8858 }, rating: 4.1, reviewCount: 670, amenities: ['WiFi', 'Pool', 'Gym', 'Restaurant'], images: ['https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=800'], starCategory: 4, freeCancellation: true, propertyType: 'Hotel' },
+  { name: 'The Leela Goa', description: 'Exclusive riverside and beachfront luxury resort in South Goa.', city: 'Goa', address: 'Mobor, Cavelossim, Goa 403731', location: { lat: 15.1582, lng: 73.9405 }, rating: 4.9, reviewCount: 1200, amenities: ['WiFi', 'Pool', 'Golf', 'Spa', 'Private Beach'], images: ['https://images.unsplash.com/photo-1584132967334-10e028bd69f7?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Resort', chainName: 'The Leela' },
+  { name: 'W Goa', description: 'Vibrant and trendy luxury resort on Vagator Beach.', city: 'Goa', address: 'Vagator Beach, Goa 403509', location: { lat: 15.6022, lng: 73.7335 }, rating: 4.6, reviewCount: 780, amenities: ['WiFi', 'Pool', 'Club', 'Spa', 'Restaurant'], images: ['https://images.unsplash.com/photo-1540541338287-41700207dee6?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Resort', chainName: 'W' },
+  { name: 'Lemon Tree Hotel Candolim', description: 'Lively hotel with colorful interiors near Candolim beach.', city: 'Goa', address: 'Candolim, Goa 403515', location: { lat: 15.5186, lng: 73.7667 }, rating: 4.0, reviewCount: 450, amenities: ['WiFi', 'Pool', 'Gym', 'Restaurant'], images: ['https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800'], starCategory: 4, freeCancellation: true, propertyType: 'Hotel', chainName: 'Lemon Tree' },
+  { name: 'Ginger Goa Madgaon', description: 'Smart and economical hotel for business and leisure travelers.', city: 'Goa', address: 'Madgaon, Goa 403601', location: { lat: 15.2736, lng: 73.9667 }, rating: 3.7, reviewCount: 280, amenities: ['WiFi', 'AC', 'Parking', 'Gym'], images: ['https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800'], starCategory: 3, freeCancellation: false, propertyType: 'Hotel', chainName: 'Tata' },
+  { name: 'Zuri White Sands Resort', description: 'Large estate resort on Varca beach with sprawling pool.', city: 'Goa', address: 'Varca, Goa 403721', location: { lat: 15.2167, lng: 73.9333 }, rating: 4.5, reviewCount: 920, amenities: ['WiFi', 'Pool', 'Casino', 'Spa', 'Beach Access'], images: ['https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Resort' },
+  { name: 'ITC Maurya New Delhi', description: 'Iconic luxury hotel known for its signature Bukhara restaurant.', city: 'New Delhi', address: 'Sardar Patel Marg, New Delhi 110021', location: { lat: 28.5971, lng: 77.1724 }, rating: 4.8, reviewCount: 2100, amenities: ['WiFi', 'Pool', 'Fine Dining', 'Spa', 'Gym'], images: ['https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Hotel', chainName: 'ITC' },
+  { name: 'The Lalit New Delhi', description: 'Grand luxury hotel near Connaught Place with city views.', city: 'New Delhi', address: 'Barakhamba Avenue, New Delhi 110001', location: { lat: 28.6312, lng: 77.2307 }, rating: 4.4, reviewCount: 1340, amenities: ['WiFi', 'Pool', 'Spa', 'Restaurant', 'Nightclub'], images: ['https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Hotel' },
+  { name: 'Pride Plaza Hotel Aerocity', description: 'Modern hotel with traditional Indian hospitality near the airport.', city: 'New Delhi', address: 'Aerocity, New Delhi 110037', location: { lat: 28.5524, lng: 77.1234 }, rating: 4.2, reviewCount: 870, amenities: ['WiFi', 'Pool', 'Spa', 'Gym', 'Restaurant'], images: ['https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=800'], starCategory: 4, freeCancellation: true, propertyType: 'Hotel' },
+  { name: 'The Fern Residency Bengaluru', description: 'Eco-friendly hotel in Bengaluru with modern amenities.', city: 'Bangalore', address: 'Yeshwanthpur, Bangalore 560022', location: { lat: 13.0285, lng: 77.5456 }, rating: 4.1, reviewCount: 560, amenities: ['WiFi', 'AC', 'Restaurant', 'Green Hotel'], images: ['https://images.unsplash.com/photo-1590073242678-70ee3fc28e8e?w=800'], starCategory: 4, freeCancellation: true, propertyType: 'Hotel' },
+  { name: 'Park Bangalore', description: 'Trendy boutique hotel on MG Road with vibrant interiors.', city: 'Bangalore', address: 'MG Road, Bangalore 560001', location: { lat: 12.9756, lng: 77.6111 }, rating: 4.3, reviewCount: 740, amenities: ['WiFi', 'Pool', 'Bar', 'Gym', 'Restaurant'], images: ['https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Hotel' },
+  { name: 'Royal Orchid Bangalore', description: 'Luxury hotel with colonial charm and landscaped gardens.', city: 'Bangalore', address: 'Old Airport Road, Bangalore 560008', location: { lat: 12.9599, lng: 77.6444 }, rating: 4.4, reviewCount: 910, amenities: ['WiFi', 'Pool', 'Golf View', 'Restaurant'], images: ['https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800'], starCategory: 4, freeCancellation: true, propertyType: 'Hotel' },
+  { name: 'Novotel Ahmedabad', description: 'Modern business hotel on SG Highway with spacious rooms.', city: 'Ahmedabad', address: 'SG Highway, Ahmedabad 380015', location: { lat: 23.0189, lng: 72.5028 }, rating: 4.2, reviewCount: 630, amenities: ['WiFi', 'Pool', 'Gym', 'Restaurant'], images: ['https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800'], starCategory: 4, freeCancellation: true, propertyType: 'Hotel', chainName: 'Accor' },
+  { name: 'Four Points by Sheraton Ahmedabad', description: 'Comfortable hotel for business travelers near city center.', city: 'Ahmedabad', address: 'Ellis Bridge, Ahmedabad 380006', location: { lat: 23.0234, lng: 72.5711 }, rating: 4.1, reviewCount: 520, amenities: ['WiFi', 'Gym', 'Restaurant', 'Business Center'], images: ['https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=800'], starCategory: 4, freeCancellation: true, propertyType: 'Hotel', chainName: 'Sheraton' },
+  { name: 'The Gateway Hotel Chennai', description: 'Upscale hotel in IT corridor with multiple dining options.', city: 'Chennai', address: 'Old Mahabalipuram Rd, Chennai 600119', location: { lat: 12.8911, lng: 80.2289 }, rating: 4.3, reviewCount: 710, amenities: ['WiFi', 'Pool', 'Gym', 'Restaurant'], images: ['https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800'], starCategory: 4, freeCancellation: true, propertyType: 'Hotel', chainName: 'Taj' },
+  { name: 'Hyatt Regency Chennai', description: 'Full service hotel in city center with contemporary design.', city: 'Chennai', address: 'Anna Salai, Chennai 600118', location: { lat: 13.0441, lng: 80.2435 }, rating: 4.5, reviewCount: 1120, amenities: ['WiFi', 'Pool', 'Spa', 'Gym', 'Restaurant'], images: ['https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Hotel', chainName: 'Hyatt' },
+  { name: 'Brijrama Palace Varanasi', description: 'Heritage palace on the banks of the Ganges with stunning views.', city: 'Varanasi', address: 'Darbhanga Ghat, Varanasi 221001', location: { lat: 25.3090, lng: 83.0113 }, rating: 4.8, reviewCount: 450, amenities: ['WiFi', 'Fine Dining', 'Ganges View', 'Heritage Tour'], images: ['https://images.unsplash.com/photo-1561361058-c24cecae35ca?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Heritage Hotel' },
+  { name: 'Taj Swarna Amritsar', description: 'Luxury hotel with modern amenities near the Golden Temple.', city: 'Amritsar', address: 'Plot No. C-3, Outer Circular Rd, Amritsar 143001', location: { lat: 31.6420, lng: 74.8785 }, rating: 4.7, reviewCount: 680, amenities: ['WiFi', 'Pool', 'Gym', 'Spa', 'Restaurant'], images: ['https://images.unsplash.com/photo-1514222139-b576bb5ce006?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Hotel', chainName: 'Taj' },
+  { name: 'Park Hyatt Hyderabad', description: 'Grand luxury hotel in Banjara Hills with sophisticated rooms.', city: 'Hyderabad', address: 'Road No. 2, Banjara Hills, Hyderabad 500034', location: { lat: 17.4243, lng: 78.4348 }, rating: 4.8, reviewCount: 1200, amenities: ['WiFi', 'Pool', 'Gym', 'Spa', 'Art Gallery'], images: ['https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Hotel', chainName: 'Hyatt' },
+  { name: 'Taj Malabar Resort Kochi', description: 'Resort with a blend of Victorian and bridge architecture.', city: 'Kochi', address: 'Willingdon Island, Kochi 682003', location: { lat: 9.9419, lng: 76.2625 }, rating: 4.7, reviewCount: 890, amenities: ['WiFi', 'Pool', 'Spa', 'Sunset Cruise', 'Restaurant'], images: ['https://images.unsplash.com/photo-1609340981878-cd4e265a53fc?w=800'], starCategory: 5, freeCancellation: true, propertyType: 'Resort', chainName: 'Taj' },
+];
+
+const roomTypes = [
+  { name: 'Standard Room', roomType: 'standard', base: 1999, total: 12, amenities: ['WiFi', 'AC', 'TV', 'Attached Bathroom'] },
+  { name: 'Deluxe Room', roomType: 'deluxe', base: 3499, total: 8, amenities: ['WiFi', 'AC', 'TV', 'Mini Bar', 'City View'] },
+  { name: 'Suite', roomType: 'suite', base: 6499, total: 3, amenities: ['WiFi', 'AC', 'TV', 'Mini Bar', 'Living Area', 'Premium View', 'Bathtub'] },
+  { name: 'Premium Suite', roomType: 'superior', base: 9999, total: 2, amenities: ['WiFi', 'AC', 'TV', 'Mini Bar', 'Living Area', 'Panoramic View', 'Jacuzzi', 'Butler Service'] },
 ];
 
 const run = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/travelweb');
+    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/travelweb');
     console.log('Connected to MongoDB');
-
-    const existing = await Hotel.countDocuments();
-    if (existing > 0) {
-      console.log(`Found ${existing} hotels. Skipping seed.`);
-      process.exit(0);
-    }
-
+    await Hotel.deleteMany({});
+    await Room.deleteMany({});
     for (const h of hotels) {
-      const hotel = await Hotel.create(h);
-      await Room.create([
-        { hotel: hotel._id, name: 'Standard Room', roomType: 'standard', pricePerNight: 1999 + Math.floor(Math.random() * 1000), totalRooms: 10, availableRooms: 10 },
-        { hotel: hotel._id, name: 'Deluxe Room', roomType: 'deluxe', pricePerNight: 3499 + Math.floor(Math.random() * 1000), totalRooms: 6, availableRooms: 6 },
-        { hotel: hotel._id, name: 'Suite', roomType: 'suite', pricePerNight: 5999 + Math.floor(Math.random() * 2000), totalRooms: 2, availableRooms: 2 },
-      ]);
+      const hotel = await Hotel.create({ ...h, isActive: true });
+      const star = hotel.starCategory;
+      const rooms = roomTypes.slice(0, star >= 5 ? 4 : star >= 4 ? 3 : 2).map(r => ({
+        hotel: hotel._id, name: r.name, roomType: r.roomType,
+        pricePerNight: r.base + Math.floor(Math.random() * 1500) + (star * 300),
+        totalRooms: r.total, availableRooms: r.total, amenities: r.amenities, isActive: true,
+      }));
+      await Room.create(rooms);
     }
     console.log(`Seeded ${hotels.length} hotels with rooms.`);
-  } catch (err) {
-    console.error(err);
-    process.exit(1);
-  } finally {
-    await mongoose.disconnect();
-    process.exit(0);
-  }
+  } catch (e) { console.error(e); process.exit(1); }
+  finally { await mongoose.disconnect(); process.exit(0); }
 };
-
 run();

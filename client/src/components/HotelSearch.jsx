@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { toast } from "react-hot-toast";
 import { HiSearch } from "react-icons/hi";
 import { FaCalendarAlt, FaUser, FaChevronDown } from "react-icons/fa";
 import CalendarComponent from "./CalendarComponent";
@@ -12,10 +13,13 @@ const CITIES = [
 ];
 
 const HotelSearch = ({ onSearch }) => {
+  const today = new Date().toISOString().split('T')[0];
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
   const [city, setCity] = useState("Mumbai");
   const [citySearch, setCitySearch] = useState("");
-  const [checkIn, setCheckIn] = useState("");
-  const [checkOut, setCheckOut] = useState("");
+  const [checkIn, setCheckIn] = useState(today);
+  const [checkOut, setCheckOut] = useState(tomorrow);
   const [guests, setGuests] = useState(2);
   const [rooms, setRooms] = useState(1);
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
@@ -93,14 +97,8 @@ const HotelSearch = ({ onSearch }) => {
               </div>
               {cityDropdownOpen && (
                 <div className="absolute z-50 bg-white rounded-lg shadow-xl border border-gray-200 mt-2 w-full max-h-60 overflow-y-auto left-0 min-w-[220px]">
-                  <input
-                    type="text"
-                    placeholder="Type to search..."
-                    value={citySearch}
-                    onChange={(e) => setCitySearch(e.target.value)}
-                    className="w-full px-4 py-2 border-b text-sm"
-                  />
-                  {CITIES.filter((c) => c.toLowerCase().includes((citySearch ?? city).toLowerCase()))
+                  {CITIES.filter((c) => c.toLowerCase().includes((citySearch || "").toLowerCase()))
+                    .filter((c, i, arr) => arr.indexOf(c) === i) // deduplicate
                     .slice(0, 15)
                     .map((c) => (
                       <button
@@ -249,13 +247,13 @@ const HotelSearch = ({ onSearch }) => {
                 type="button"
                 onClick={() => {
                   if (!city || !checkIn || !checkOut) {
-                    alert("Please select city, check-in, and check-out dates.");
+                    toast.error("Please select city, check-in, and check-out dates.");
                     return;
                   }
                   const cIn = new Date(checkIn + "T12:00:00");
                   const cOut = new Date(checkOut + "T12:00:00");
                   if (cOut <= cIn) {
-                    alert("Check-out must be after check-in.");
+                    toast.error("Check-out must be after check-in.");
                     return;
                   }
                   onSearch?.({

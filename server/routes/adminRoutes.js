@@ -39,6 +39,16 @@ router.post('/visa', adminController.addVisa);
 router.put('/visa/:id', adminController.updateVisa);
 router.put('/visa-applications/:id', adminController.approveVisaApplication);
 
+// Buses
+router.get('/buses', adminController.getAllBookings); // Filtered by type=bus
+router.post('/buses', (req, res) => res.status(501).json({ message: 'Not implemented' }));
+
+// Cabs
+router.get('/cabs', adminController.getAllBookings); // Filtered by type=cab
+
+// Cruises
+router.get('/cruises', adminController.getAllBookings); // Filtered by type=cruise
+
 // Bookings
 router.get('/bookings', adminController.getAllBookings);
 router.put('/bookings/:id/approve', adminController.approveBooking);

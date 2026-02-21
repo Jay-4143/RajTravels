@@ -72,6 +72,11 @@ const hotelSchema = new mongoose.Schema({
     trim: true,
     default: 'Hotel',
   },
+  chainName: {
+    type: String,
+    trim: true,
+    default: null,
+  },
   isActive: {
     type: Boolean,
     default: true,

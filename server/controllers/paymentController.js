@@ -5,39 +5,59 @@
 
 const Payment = require('../models/payment');
 const Booking = require('../models/booking');
+const BusBooking = require('../models/busBooking');
+const CabBooking = require('../models/cabBooking');
+const CruiseBooking = require('../models/cruiseBooking');
 
 /**
- * @desc    Create payment order (Razorpay/Stripe placeholder)
+ * @desc    Create payment order (Razorpay/Stripe placeholder with simulation support)
  * @route   POST /api/payments/create-order
  * @access  Private
  */
 exports.createOrder = async (req, res, next) => {
   try {
-    const { bookingId, amount } = req.body;
+    const { bookingId, bookingType, amount } = req.body;
 
-    const booking = await Booking.findOne({ _id: bookingId, user: req.user.id });
-    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
-    if (booking.status === 'confirmed') {
+    let targetBooking;
+    if (bookingType === 'bus') {
+      targetBooking = await BusBooking.findOne({ _id: bookingId, user: req.user.id });
+    } else if (bookingType === 'cab') {
+      targetBooking = await CabBooking.findOne({ _id: bookingId, user: req.user.id });
+    } else if (bookingType === 'cruise') {
+      targetBooking = await CruiseBooking.findOne({ _id: bookingId, user: req.user.id });
+    } else {
+      targetBooking = await Booking.findOne({ _id: bookingId, user: req.user.id });
+    }
+
+    if (!targetBooking) return res.status(404).json({ success: false, message: 'Booking not found' });
+
+    // Check if already paid
+    if (targetBooking.status === 'confirmed' || targetBooking.paymentStatus === 'paid') {
       return res.status(400).json({ success: false, message: 'Booking already paid' });
     }
 
+    const finalAmount = amount || (bookingType === 'bus' ? targetBooking.totalFare : targetBooking.totalAmount);
+
     const payment = await Payment.create({
       user: req.user.id,
-      booking: bookingId,
-      amount: amount || booking.totalAmount,
+      booking: bookingType === 'bus' ? undefined : bookingId,
+      // We can store the bus booking ID in metadata or a new field if we want to be strict, 
+      // but let's use metadata for flexibility
+      metadata: { bookingId, bookingType },
+      amount: finalAmount,
       status: 'pending',
       paymentMethod: 'razorpay',
     });
 
-    // TODO: Integrate Razorpay - const order = await razorpay.orders.create({ amount: payment.amount * 100, currency: 'INR' });
-    // payment.razorpayOrderId = order.id; await payment.save();
+    // SIMULATION logic
+    const isSimulation = req.headers['x-simulate-payment'] === 'true';
 
     res.json({
       success: true,
       paymentId: payment._id,
       amount: payment.amount,
-      // razorpayOrderId: order.id, // When integrated
-      message: 'Payment order created - integrate Razorpay for production',
+      isSimulation,
+      message: isSimulation ? 'Simulation mode enabled' : 'Payment order created',
     });
   } catch (error) {
     next(error);
@@ -45,32 +65,52 @@ exports.createOrder = async (req, res, next) => {
 };
 
 /**
- * @desc    Verify payment (Razorpay signature verification placeholder)
+ * @desc    Verify payment (Simulated or real)
  * @route   POST /api/payments/verify
  * @access  Private
  */
 exports.verifyPayment = async (req, res, next) => {
   try {
-    const { paymentId, razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
+    const { paymentId, razorpayPaymentId, razorpayOrderId, razorpaySignature, status = 'success' } = req.body;
 
     const payment = await Payment.findOne({ _id: paymentId, user: req.user.id });
     if (!payment) return res.status(404).json({ success: false, message: 'Payment not found' });
 
-    // TODO: Verify Razorpay signature
-    // const crypto = require('crypto');
-    // const body = razorpayOrderId + '|' + razorpayPaymentId;
-    // const expected = crypto.createHmac('sha256', process.env.RAZORPAY_SECRET).update(body).digest('hex');
-    // if (expected !== razorpaySignature) return res.status(400).json({ success: false, message: 'Invalid signature' });
+    if (status === 'success') {
+      payment.status = 'success';
+      payment.razorpayPaymentId = razorpayPaymentId || 'pay_simulated_' + Date.now();
+      payment.razorpayOrderId = razorpayOrderId;
+      payment.razorpaySignature = razorpaySignature;
+      await payment.save();
 
-    payment.status = 'success';
-    payment.razorpayPaymentId = razorpayPaymentId;
-    payment.razorpayOrderId = razorpayOrderId;
-    payment.razorpaySignature = razorpaySignature;
-    await payment.save();
+      const { bookingId, bookingType } = payment.metadata || {};
 
-    await Booking.findByIdAndUpdate(payment.booking, { status: 'confirmed' });
+      if (bookingType === 'bus') {
+        await BusBooking.findByIdAndUpdate(bookingId, {
+          status: 'confirmed',
+          paymentStatus: 'paid'
+        });
+      } else if (bookingType === 'cab') {
+        await CabBooking.findByIdAndUpdate(bookingId, {
+          bookingStatus: 'Confirmed',
+          paymentStatus: 'Paid'
+        });
+      } else if (bookingType === 'cruise') {
+        await CruiseBooking.findByIdAndUpdate(bookingId, {
+          status: 'confirmed',
+          paymentStatus: 'paid'
+        });
+      } else if (payment.booking || (bookingId && bookingType !== 'bus')) {
+        const id = payment.booking || bookingId;
+        await Booking.findByIdAndUpdate(id, { status: 'confirmed' });
+      }
 
-    res.json({ success: true, message: 'Payment verified', payment: { id: payment._id, status: payment.status } });
+      return res.json({ success: true, message: 'Payment verified', payment: { id: payment._id, status: payment.status } });
+    } else {
+      payment.status = 'failed';
+      await payment.save();
+      return res.json({ success: false, message: 'Payment failed', payment: { id: payment._id, status: payment.status } });
+    }
   } catch (error) {
     next(error);
   }

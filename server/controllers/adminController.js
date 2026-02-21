@@ -13,6 +13,10 @@ const VisaApplication = require('../models/visaApplication');
 const Booking = require('../models/booking');
 const Payment = require('../models/payment');
 const PackageInquiry = require('../models/packageInquiry');
+const BusBooking = require('../models/busBooking');
+const CabBooking = require('../models/cabBooking');
+const CruiseBooking = require('../models/cruiseBooking');
+const VisaInquiry = require('../models/visaInquiry');
 
 /**
  * @desc    Dashboard analytics
@@ -21,13 +25,30 @@ const PackageInquiry = require('../models/packageInquiry');
  */
 exports.getDashboard = async (req, res, next) => {
   try {
-    const [totalUsers, totalBookings, totalRevenue, flightBookings, hotelBookings, packageBookings] = await Promise.all([
+    const [
+      totalUsers,
+      totalBookings,
+      totalRevenue,
+      flightBookings,
+      hotelBookings,
+      packageBookings,
+      busBookings,
+      cabBookings,
+      cruiseBookings,
+      packageInquiries,
+      visaInquiries
+    ] = await Promise.all([
       User.countDocuments(),
       Booking.countDocuments({ status: { $nin: ['cancelled'] } }),
       Booking.aggregate([{ $match: { status: { $in: ['confirmed', 'completed'] } } }, { $group: { _id: null, total: { $sum: '$totalAmount' } } }]),
       Booking.countDocuments({ bookingType: 'flight', status: { $nin: ['cancelled'] } }),
       Booking.countDocuments({ bookingType: 'hotel', status: { $nin: ['cancelled'] } }),
       Booking.countDocuments({ bookingType: 'package', status: { $nin: ['cancelled'] } }),
+      BusBooking.countDocuments({ status: { $nin: ['cancelled'] } }),
+      CabBooking.countDocuments({ bookingStatus: { $ne: 'Cancelled' } }),
+      CruiseBooking.countDocuments({ status: { $nin: ['cancelled'] } }),
+      PackageInquiry.countDocuments(),
+      VisaInquiry.countDocuments(),
     ]);
 
     const recentBookings = await Booking.find()
@@ -40,9 +61,20 @@ exports.getDashboard = async (req, res, next) => {
       success: true,
       dashboard: {
         totalUsers,
-        totalBookings,
+        totalBookings: totalBookings + busBookings + cabBookings + cruiseBookings,
         totalRevenue: totalRevenue[0]?.total || 0,
-        byType: { flights: flightBookings, hotels: hotelBookings, packages: packageBookings },
+        byType: {
+          flights: flightBookings,
+          hotels: hotelBookings,
+          packages: packageBookings,
+          buses: busBookings,
+          cabs: cabBookings,
+          cruises: cruiseBookings
+        },
+        inquiries: {
+          packages: packageInquiries,
+          visas: visaInquiries
+        },
         recentBookings,
       },
     });
@@ -198,20 +230,37 @@ exports.getAllBookings = async (req, res, next) => {
   try {
     const { type, status, page = 1, limit = 20 } = req.query;
     const query = {};
-    if (type) query.bookingType = type;
     if (status) query.status = status;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    const bookings = await Booking.find(query)
-      .populate('user', 'name email')
-      .populate('flight', 'airline from to')
-      .populate('hotel', 'name city')
-      .populate('package', 'title destination')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .lean();
-    const total = await Booking.countDocuments(query);
+    let bookings = [];
+    let total = 0;
+
+    if (type === 'bus') {
+      bookings = await BusBooking.find(query).populate('bus').sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)).lean();
+      total = await BusBooking.countDocuments(query);
+    } else if (type === 'cab') {
+      const cabQuery = status ? { bookingStatus: status } : {};
+      bookings = await CabBooking.find(cabQuery).populate('cab').sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)).lean();
+      total = await CabBooking.countDocuments(cabQuery);
+    } else if (type === 'cruise') {
+      bookings = await CruiseBooking.find(query).populate('cruise').sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)).lean();
+      total = await CruiseBooking.countDocuments(query);
+    } else {
+      const bQuery = { ...query };
+      if (type && type !== 'all') bQuery.bookingType = type;
+      bookings = await Booking.find(bQuery)
+        .populate('user', 'name email')
+        .populate('flight', 'airline from to')
+        .populate('hotel', 'name city')
+        .populate('package', 'title destination')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean();
+      total = await Booking.countDocuments(bQuery);
+    }
+
     res.json({ success: true, bookings, pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) } });
   } catch (error) {
     next(error);

@@ -8,6 +8,7 @@ import {
     FaUserShield, FaRegSmile, FaChevronDown, FaChevronUp, FaQuoteLeft
 } from 'react-icons/fa';
 import { MdEventSeat, MdLocalOffer, MdVerified } from 'react-icons/md';
+import { useGlobal } from '../context/GlobalContext';
 
 // ─── DATA ──────────────────────────────────────────────────────────────────
 
@@ -175,6 +176,7 @@ const AmenityTag = ({ amenity }) => (
 
 // ─── BUS CARD ─────────────────────────────────────────────────────────────
 const BusCard = ({ bus, onSelect }) => {
+    const { formatPrice } = useGlobal();
     const cancelColor = {
         'Free Cancellation': 'text-green-600',
         'Partial Refund': 'text-yellow-600',
@@ -229,7 +231,7 @@ const BusCard = ({ bus, onSelect }) => {
                             <span className="font-semibold text-gray-700 text-sm">{bus.rating}</span>
                             <span className="text-gray-400 text-xs">({bus.totalRatings})</span>
                         </div>
-                        <p className="text-3xl font-extrabold text-blue-600">₹{bus.price}</p>
+                        <p className="text-3xl font-extrabold text-blue-600">{formatPrice(bus.price)}</p>
                         <p className="text-xs text-gray-400 mb-2">per seat</p>
                         <p className={`text-xs font-medium ${cancelColor} mb-3`}>✓ {bus.cancellationPolicy}</p>
                         <p className="text-xs text-gray-500 mb-3 flex items-center justify-end gap-1">
@@ -275,9 +277,8 @@ const FAQItem = ({ q, a }) => {
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────
 const Buses = () => {
     const navigate = useNavigate();
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const defaultDate = tomorrow.toISOString().split('T')[0];
+    const { formatPrice } = useGlobal();
+    const defaultDate = new Date().toISOString().split('T')[0];
 
     const [searchForm, setSearchForm] = useState({ from: '', to: '', date: defaultDate });
     const [cities, setCities] = useState([]);
@@ -358,9 +359,17 @@ const Buses = () => {
           HERO SEARCH
       ══════════════════════════════════════════════════════════ */}
             <div
-                className="relative bg-cover bg-center py-24 px-4"
+                className="relative bg-cover bg-center py-24 px-4 overflow-hidden"
                 style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=1920&q=80)' }}
             >
+                {/* Fallback for background image if it fails (using an absolute positioned img behind content) */}
+                <img
+                    src="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=1920&q=80"
+                    className="absolute inset-0 w-full h-full object-cover opacity-0"
+                    onError={e => {
+                        e.target.parentElement.style.backgroundImage = 'url(https://images.unsplash.com/photo-1529253355930-ddbe423a2ac7?w=1920&q=80)';
+                    }}
+                />
                 <div className="absolute inset-0 bg-gradient-to-b from-slate-900/85 via-blue-950/70 to-slate-900/85"></div>
                 {/* Floating badges */}
                 <div className="absolute top-24 left-8 hidden lg:flex gap-2 flex-col">
@@ -448,7 +457,7 @@ const Buses = () => {
                                         <span key={h} className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full border border-blue-200">{h}</span>
                                     ))}
                                     <span className="bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full border border-green-200">⏱ {selectedRoute.duration}</span>
-                                    <span className="bg-orange-50 text-orange-700 text-xs px-2 py-0.5 rounded-full border border-orange-200">from ₹{selectedRoute.starting}</span>
+                                    <span className="bg-orange-50 text-orange-700 text-xs px-2 py-0.5 rounded-full border border-orange-200">from {formatPrice(selectedRoute.starting)}</span>
                                 </div>
                             )}
                         </div>
@@ -606,6 +615,7 @@ const Buses = () => {
                                         src={route.image}
                                         alt={`${route.from} to ${route.to}`}
                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                        onError={e => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1529253355930-ddbe423a2ac7?w=600&q=80'; }}
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent"></div>
                                     <div className="absolute inset-0 p-4 flex flex-col justify-between">
@@ -627,7 +637,7 @@ const Buses = () => {
                                                     <span className="flex items-center gap-1"><FaClock className="text-xs" /> {route.duration}</span>
                                                     <span className="flex items-center gap-1"><FaBus className="text-xs" /> {route.buses} buses</span>
                                                 </div>
-                                                <span className="bg-yellow-400 text-gray-900 font-bold px-2.5 py-1 rounded-lg text-xs">from ₹{route.starting}</span>
+                                                <span className="bg-yellow-400 text-gray-900 font-bold px-2.5 py-1 rounded-lg text-xs">from {formatPrice(route.starting)}</span>
                                             </div>
                                             <div className="mt-2 flex items-center gap-1 text-yellow-300 text-xs font-semibold group-hover:translate-x-1 transition-transform">
                                                 View Buses <FaArrowRight className="text-xs" />
@@ -654,6 +664,7 @@ const Buses = () => {
                                             src={bt.image}
                                             alt={bt.type}
                                             className="w-full h-60 object-cover group-hover:scale-105 transition-transform duration-500"
+                                            onError={e => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=800&q=80'; }}
                                         />
                                         <div className={`absolute inset-0 bg-gradient-to-t ${bt.color} opacity-80`}></div>
                                         <div className="absolute top-3 right-3 bg-white/20 backdrop-blur text-white text-xs font-bold px-3 py-1 rounded-full border border-white/30">

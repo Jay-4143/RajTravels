@@ -15,6 +15,7 @@ import { searchHotels } from "../api/hotels";
 const Hotels = () => {
   const location = useLocation();
   const searchExecuted = useRef(false);
+  const searchBarRef = useRef(null);
   const [searchParams, setSearchParams] = useState(null);
   const [filterParams, setFilterParams] = useState({});
   const [sort, setSort] = useState("rating");
@@ -112,7 +113,9 @@ const Hotels = () => {
 
   return (
     <>
-      <HotelSearch onSearch={handleSearch} />
+      <div ref={searchBarRef}>
+        <HotelSearch onSearch={handleSearch} />
+      </div>
       {searchParams && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col lg:flex-row gap-8">
@@ -153,7 +156,12 @@ const Hotels = () => {
       }} />
       <HotelFeaturedHotels onSearch={handleSearch} />
       <HotelPromoBanner />
-      <HotelOffers />
+      <HotelOffers onBookNow={(city) => {
+        const today = new Date().toISOString().slice(0, 10);
+        const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+        handleSearch({ city, checkIn: today, checkOut: tomorrow, guests: 2, rooms: 1 });
+        searchBarRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }} />
       <WhyBookHotels />
       <Reviews />
       <Footer />

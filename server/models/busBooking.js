@@ -24,13 +24,13 @@ const busBookingSchema = new mongoose.Schema(
         status: {
             type: String,
             enum: ['pending', 'confirmed', 'cancelled'],
-            default: 'confirmed',
+            default: 'pending',
         },
         pnr: { type: String, unique: true },
         paymentStatus: {
             type: String,
             enum: ['pending', 'paid', 'refunded'],
-            default: 'paid',
+            default: 'pending',
         },
         cancellationPolicy: { type: String },
     },
@@ -38,11 +38,10 @@ const busBookingSchema = new mongoose.Schema(
 );
 
 // Auto-generate PNR
-busBookingSchema.pre('save', function (next) {
+busBookingSchema.pre('save', async function () {
     if (!this.pnr) {
         this.pnr = 'BUS' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 5).toUpperCase();
     }
-    next();
 });
 
 module.exports = mongoose.model('BusBooking', busBookingSchema);

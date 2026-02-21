@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getPackageById, submitPackageInquiry } from "../api/packageApi";
-import { FaMapMarkerAlt, FaClock, FaCheck, FaTimes, FaPhoneAlt, FaEnvelope, FaCalendarCheck } from 'react-icons/fa';
+import { FaMapMarkerAlt, FaClock, FaCheck, FaTimes, FaPhoneAlt, FaEnvelope, FaCalendarCheck, FaDownload } from 'react-icons/fa';
+import { useGlobal } from "../context/GlobalContext";
+import { generateTicket } from "../utils/TicketGenerator";
 
 const PackageDetails = () => {
     const { id } = useParams();
@@ -10,6 +12,7 @@ const PackageDetails = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState('itinerary');
+    const { formatPrice } = useGlobal();
 
     // Inquiry Form State
     const [inquiryData, setInquiryData] = useState({
@@ -59,9 +62,10 @@ const PackageDetails = () => {
             {/* Hero Header */}
             <div className="relative h-[55vh] min-h-[360px] bg-gray-900">
                 <img
-                    src={pkg.images[0] || 'https://via.placeholder.com/1200x600'}
+                    src={pkg.images?.[0] || 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=1200&q=80'}
                     alt={pkg.title}
                     className="w-full h-full object-cover object-center"
+                    onError={e => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=1200&q=80'; }}
                 />
                 <div className="absolute inset-0 bg-black/50"></div>
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 md:px-16">
@@ -160,7 +164,7 @@ const PackageDetails = () => {
                     <div className="bg-white rounded-xl shadow-lg p-6 sticky top-24">
                         <div className="text-center mb-6">
                             <p className="text-gray-500 text-sm">Starting from</p>
-                            <div className="text-4xl font-bold text-blue-600">₹{pkg.price.toLocaleString()}</div>
+                            <div className="text-4xl font-bold text-blue-600">{formatPrice(pkg.price)}</div>
                             <p className="text-gray-400 text-xs">per person</p>
                         </div>
 
@@ -172,8 +176,18 @@ const PackageDetails = () => {
                                 <h3 className="font-bold text-lg mb-2">Inquiry Sent!</h3>
                                 <p className="text-sm">Our travel expert will contact you shortly.</p>
                                 <button
+                                    onClick={() => generateTicket({
+                                        ...pkg,
+                                        ...inquiryData,
+                                        bookingReference: `PKG-INQ-${Math.floor(1000 + Math.random() * 9000)}`
+                                    }, 'package')}
+                                    className="mt-6 w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition shadow-lg flex items-center justify-center gap-2"
+                                >
+                                    <FaDownload /> Download Itinerary
+                                </button>
+                                <button
                                     onClick={() => setInquiryStatus('idle')}
-                                    className="mt-4 text-green-700 underline text-sm"
+                                    className="mt-4 text-green-700 underline text-sm block mx-auto"
                                 >
                                     Send another inquiry
                                 </button>

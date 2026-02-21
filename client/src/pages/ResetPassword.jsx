@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 const ResetPassword = () => {
     const [password, setPassword] = useState('');
@@ -12,7 +13,8 @@ const ResetPassword = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (password !== confirmPassword) {
-            return alert("Passwords don't match");
+            toast.error("Passwords don't match");
+            return;
         }
 
         try {
@@ -20,10 +22,10 @@ const ResetPassword = () => {
                 token,
                 password
             });
-            alert(res.data.message);
+            toast.success(res.data.message);
             navigate('/login');
         } catch (err) {
-            alert(err.response?.data?.message || 'Error resetting password');
+            toast.error(err.response?.data?.message || 'Error resetting password');
         }
     };
 

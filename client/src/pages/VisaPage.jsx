@@ -3,10 +3,12 @@ import VisaHero from '../components/visa/VisaHero';
 import VisaFeatures from '../components/visa/VisaFeatures';
 import VisaSteps from '../components/visa/VisaSteps';
 import VisaFAQ from '../components/visa/VisaFAQ';
+import { useGlobal } from '../context/GlobalContext';
 
 const VisaPage = () => {
   const [searchResults, setSearchResults] = useState(null);
   const [loading, setLoading] = useState(false);
+  const { formatPrice } = useGlobal();
 
   return (
     <div className="min-h-screen flex flex-col pt-16"> {/* Add padding top for fixed navbar */}
@@ -37,7 +39,12 @@ const VisaPage = () => {
                 <div key={visa._id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow border border-gray-100">
                   <div className="h-48 bg-gray-200 relative">
                     {visa.images && visa.images[0] ? (
-                      <img src={visa.images[0]} alt={visa.country} className="w-full h-full object-cover" />
+                      <img
+                        src={visa.images[0]}
+                        alt={visa.country}
+                        className="w-full h-full object-cover"
+                        onError={e => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1549317661-bd32c8ce0729?w=400'; }}
+                      />
                     ) : (
                       <div className="flex items-center justify-center h-full bg-blue-100 text-blue-500 font-bold">
                         {visa.country}
@@ -51,7 +58,7 @@ const VisaPage = () => {
                   <div className="p-6">
                     <h3 className="text-xl font-bold mb-2 flex justify-between items-center">
                       {visa.country}
-                      <span className="text-blue-600 text-lg">₹{visa.cost}</span>
+                      <span className="text-blue-600 text-lg">{formatPrice(visa.cost)}</span>
                     </h3>
 
                     <div className="space-y-2 text-sm text-gray-600 mb-4">

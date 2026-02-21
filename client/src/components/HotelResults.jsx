@@ -1,6 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { HiFilter } from "react-icons/hi";
+import { FaList, FaMapMarkerAlt } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import { useGlobal } from "../context/GlobalContext";
+import HotelMapView from "./HotelMapView";
 
 const AMENITIES_OPTIONS = [
   "WiFi", "Swimming Pool", "Gym", "Spa", "Restaurant", "Bar", "Parking", "Airport Shuttle",
@@ -10,6 +13,7 @@ const AMENITIES_OPTIONS = [
 const PROPERTY_TYPES = ["Hotel", "Resort", "Apartment", "Villa", "Hostel", "Guesthouse"];
 
 const HotelCard = ({ hotel, searchParams, onViewDetails }) => {
+  const { formatPrice } = useGlobal();
   const imageUrl = hotel.images?.[0] || "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800";
   const amenitiesPreview = hotel.amenities?.slice(0, 4) || [];
   const pricePerNight = hotel.pricePerNight || 0;
@@ -50,7 +54,7 @@ const HotelCard = ({ hotel, searchParams, onViewDetails }) => {
               )}
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-gray-900">₹{pricePerNight.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-gray-900">{formatPrice(pricePerNight)}</p>
               <p className="text-xs text-gray-500">per night</p>
               <button
                 type="button"
@@ -80,6 +84,7 @@ const HotelResults = ({
   loading,
 }) => {
   const navigate = useNavigate();
+  const [viewMode, setViewMode] = useState("list"); // "list" | "map"
 
   const handleViewDetails = (hotel) => {
     navigate(`/hotels/${hotel._id}`, { state: { searchParams } });
@@ -91,22 +96,49 @@ const HotelResults = ({
         <p className="text-gray-600">
           {loading ? "Searching..." : `${pagination?.total ?? hotels.length} hotel(s) found`}
         </p>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Sort:</span>
-          <select
-            value={`${sort}-${order}`}
-            onChange={(e) => {
-              const [s, o] = e.target.value.split("-");
-              onSortChange(s, o);
-            }}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-          >
-            <option value="rating-desc">Rating: High to Low</option>
-            <option value="rating-asc">Rating: Low to High</option>
-            <option value="price-asc">Price: Low to High</option>
-            <option value="price-desc">Price: High to Low</option>
-            <option value="starCategory-desc">Stars: High to Low</option>
-          </select>
+        <div className="flex items-center gap-3">
+          {/* List / Map toggle */}
+          <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${viewMode === "list"
+                ? "bg-red-500 text-white"
+                : "bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+            >
+              <FaList size={12} /> List
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("map")}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${viewMode === "map"
+                ? "bg-red-500 text-white"
+                : "bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+            >
+              <FaMapMarkerAlt size={12} /> Map
+            </button>
+          </div>
+
+          {/* Sort */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Sort:</span>
+            <select
+              value={`${sort}-${order}`}
+              onChange={(e) => {
+                const [s, o] = e.target.value.split("-");
+                onSortChange(s, o);
+              }}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="rating-desc">Rating: High to Low</option>
+              <option value="rating-asc">Rating: Low to High</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+              <option value="starCategory-desc">Stars: High to Low</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -118,7 +150,15 @@ const HotelResults = ({
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-500">
           No hotels found. Try different dates or filters.
         </div>
+      ) : viewMode === "map" ? (
+        /* ── Map View ── */
+        <HotelMapView
+          hotels={hotels}
+          onViewDetails={handleViewDetails}
+          className="mb-6"
+        />
       ) : (
+        /* ── List View ── */
         <>
           <div className="space-y-4">
             {hotels.map((hotel) => (

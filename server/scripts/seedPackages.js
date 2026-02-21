@@ -1,324 +1,34 @@
-require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
+require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const mongoose = require('mongoose');
 const Package = require('../models/package');
-const connectDB = require('../config/db');
 
 const packages = [
-    // ── International ─────────────────────────────────────────
-    {
-        title: "Magical Thailand – Bangkok & Pattaya",
-        type: "international",
-        destination: "Thailand",
-        country: "Thailand",
-        category: ["Beach", "City"],
-        theme: ["International"],
-        featured: true,
-        hotDeal: true,
-        duration: { days: 6, nights: 5 },
-        price: 26115,
-        pricePerPerson: 26115,
-        itinerary: [
-            { day: 1, title: "Arrival Bangkok", description: "Arrive Bangkok, hotel check-in. Evening Chao Phraya cruise.", activities: ["Airport Transfer", "Chao Phraya Cruise"] },
-            { day: 2, title: "Bangkok City Tour", description: "Visit Grand Palace, Wat Pho, and floating market.", activities: ["Grand Palace", "Wat Pho", "Floating Market"] },
-            { day: 3, title: "Bangkok – Pattaya", description: "Drive to Pattaya. Coral Island boat trip.", activities: ["Coral Island Trip", "Pattaya Beach"] },
-            { day: 4, title: "Pattaya Leisure", description: "Visit Nong Nooch Garden and Tiger Zoo.", activities: ["Nong Nooch", "Tiger Zoo"] },
-            { day: 5, title: "Pattaya – Bangkok", description: "Return to Bangkok. Shopping at MBK.", activities: ["MBK Shopping"] },
-            { day: 6, title: "Departure", description: "Transfer to airport.", activities: ["Airport Drop"] }
-        ],
-        inclusions: ["4-Star Hotel Accommodation", "Daily Breakfast", "Airport Transfers", "Coral Island Tour", "Chao Phraya Cruise"],
-        exclusions: ["Airfare", "Visa Fees", "Lunch & Dinner", "Personal Expenses"],
-        images: ["https://images.unsplash.com/photo-1539367628448-4bc5c9d171c8?w=800", "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=800"],
-        highlights: ["Grand Palace", "Coral Island", "Floating Market", "Night Bazaar"],
-        validFrom: new Date(), validTo: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-        isActive: true
-    },
-    {
-        title: "Singapore City Escape",
-        type: "international",
-        destination: "Singapore",
-        country: "Singapore",
-        category: ["City", "Family"],
-        theme: ["International"],
-        featured: true,
-        hotDeal: false,
-        duration: { days: 5, nights: 4 },
-        price: 27972,
-        pricePerPerson: 27972,
-        itinerary: [
-            { day: 1, title: "Arrival Singapore", description: "Arrive Singapore. Evening at Clarke Quay.", activities: ["Clarke Quay"] },
-            { day: 2, title: "City & Sentosa", description: "Morning city tour, afternoon Sentosa Island.", activities: ["City Tour", "Sentosa Island", "Universal Studios"] },
-            { day: 3, title: "Gardens by the Bay", description: "Visit Marina Bay Sands and Gardens by the Bay.", activities: ["Marina Bay", "Gardens by the Bay"] },
-            { day: 4, title: "Jurong Bird Park", description: "Visit Jurong Bird Park and Night Safari.", activities: ["Bird Park", "Night Safari"] },
-            { day: 5, title: "Departure", description: "Transfer to airport.", activities: ["Airport Drop"] }
-        ],
-        inclusions: ["4-Star Hotel", "Breakfast", "Transfers", "Sentosa Tour", "Night Safari"],
-        exclusions: ["Airfare", "Visa", "Lunch & Dinner"],
-        images: ["https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=800", "https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=800"],
-        highlights: ["Marina Bay", "Universal Studios", "Night Safari", "Gardens by Bay"],
-        validFrom: new Date(), validTo: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-        isActive: true
-    },
-    {
-        title: "Dazzling Dubai – Land of Gold",
-        type: "international",
-        destination: "Dubai",
-        country: "UAE",
-        category: ["City", "Luxury"],
-        theme: ["International"],
-        featured: true,
-        hotDeal: true,
-        duration: { days: 6, nights: 5 },
-        price: 45000,
-        pricePerPerson: 45000,
-        itinerary: [
-            { day: 1, title: "Arrival Dubai", description: "Arrive in Dubai. Dhow Cruise dinner.", activities: ["Airport Transfer", "Dhow Cruise"] },
-            { day: 2, title: "Dubai City Tour", description: "Half day city tour + Burj Khalifa.", activities: ["Burj Khalifa", "Dubai Mall"] },
-            { day: 3, title: "Desert Safari", description: "Afternoon Desert Safari with BBQ dinner.", activities: ["Dune Bashing", "BBQ Dinner", "Camel Ride"] },
-            { day: 4, title: "Abu Dhabi Day Trip", description: "Day trip to Abu Dhabi and Ferrari World.", activities: ["Sheikh Zayed Mosque", "Ferrari World"] },
-            { day: 5, title: "Shopping Leisure", description: "Free day. Visit Gold Souk and Spice Souk.", activities: ["Gold Souk", "Spice Souk", "Dubai Mall"] },
-            { day: 6, title: "Departure", description: "Transfer to airport.", activities: ["Airport Drop"] }
-        ],
-        inclusions: ["Visa Assistance", "5-Star Hotel", "Breakfast", "All Tours", "Airport Transfers"],
-        exclusions: ["Flights", "Lunch", "Personal Expenses"],
-        images: ["https://images.unsplash.com/photo-1512453979798-5ea90b798d5c?w=800", "https://images.unsplash.com/photo-1546412414-e1885259563a?w=800"],
-        highlights: ["Burj Khalifa", "Desert Safari", "Ferrari World", "Gold Souk"],
-        validFrom: new Date(), validTo: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-        isActive: true
-    },
-    {
-        title: "Bali – Island of Gods",
-        type: "international",
-        destination: "Bali",
-        country: "Indonesia",
-        category: ["Beach", "Romantic", "Honeymoon"],
-        theme: ["International"],
-        featured: true,
-        hotDeal: false,
-        duration: { days: 7, nights: 6 },
-        price: 16670,
-        pricePerPerson: 16670,
-        itinerary: [
-            { day: 1, title: "Arrival Bali", description: "Arrive Denpasar. Transfer to Kuta.", activities: ["Hotel Check-in"] },
-            { day: 2, title: "Ubud Day Trip", description: "Visit Ubud Monkey Forest, Tegalalang Rice Terrace.", activities: ["Monkey Forest", "Rice Terrace"] },
-            { day: 3, title: "Temple Tour", description: "Uluwatu Temple and Kecak Dance.", activities: ["Uluwatu Temple", "Kecak Dance"] },
-            { day: 4, title: "Water Sports", description: "Beach leisure and water sports at Tanjung Benoa.", activities: ["Snorkeling", "Parasailing"] },
-            { day: 5, title: "Seminyak", description: "Explore Seminyak and sunset at Kuta Beach.", activities: ["Shopping", "Beach Sunset"] },
-            { day: 6, title: "Cooking Class", description: "Balinese cooking class and spa.", activities: ["Cooking Class", "Spa"] },
-            { day: 7, title: "Departure", description: "Transfer to airport.", activities: ["Airport Drop"] }
-        ],
-        inclusions: ["Villa/Hotel Stay", "Daily Breakfast", "Uluwatu Tour", "Airport Transfers"],
-        exclusions: ["Flights", "Lunch & Dinner", "Visa"],
-        images: ["https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800", "https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?w=800"],
-        highlights: ["Uluwatu Sunset", "Rice Terraces", "Monkey Forest", "Spa"],
-        validFrom: new Date(), validTo: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-        isActive: true
-    },
-    {
-        title: "Maldives Bliss – Luxury Overwater",
-        type: "international",
-        destination: "Maldives",
-        country: "Maldives",
-        category: ["Beach", "Honeymoon", "Luxury"],
-        theme: ["International"],
-        featured: true,
-        hotDeal: false,
-        duration: { days: 5, nights: 4 },
-        price: 74880,
-        pricePerPerson: 74880,
-        itinerary: [
-            { day: 1, title: "Arrival", description: "Arrive Malé. Speedboat to resort.", activities: ["Speedboat Transfer"] },
-            { day: 2, title: "Beach Leisure", description: "Relaxation on private beach and snorkeling.", activities: ["Snorkeling", "Beach"] },
-            { day: 3, title: "Diving & Water Sports", description: "Scuba diving and dolphin watching.", activities: ["Scuba Diving", "Dolphin Cruise"] },
-            { day: 4, title: "Spa Day", description: "Overwater bungalow relaxation and sunset cruise.", activities: ["Spa", "Sunset Cruise"] },
-            { day: 5, title: "Departure", description: "Speedboat to Malé airport.", activities: ["Airport Transfer"] }
-        ],
-        inclusions: ["Overwater Bungalow", "All Meals", "Speedboat", "Snorkeling Gear"],
-        exclusions: ["International Flights", "Alcohol", "Scuba Diving (Extra)"],
-        images: ["https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=800", "https://images.unsplash.com/photo-1573939898754-a25e0eb83649?w=800"],
-        highlights: ["Overwater Villa", "Coral Reef", "Dolphin Watching", "Private Beach"],
-        validFrom: new Date(), validTo: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-        isActive: true
-    },
-    {
-        title: "Vietnam Heritage Trail",
-        type: "international",
-        destination: "Vietnam",
-        country: "Vietnam",
-        category: ["City", "Heritage"],
-        theme: ["International"],
-        featured: false,
-        hotDeal: true,
-        duration: { days: 8, nights: 7 },
-        price: 18824,
-        pricePerPerson: 18824,
-        itinerary: [
-            { day: 1, title: "Arrival Hanoi", description: "Arrive Hanoi. Old Quarter walk.", activities: ["Old Quarter"] },
-            { day: 2, title: "Hanoi City Tour", description: "Hoan Kiem Lake, Ho Chi Minh Mausoleum.", activities: ["Hoan Kiem", "Ho Chi Minh Mausoleum"] },
-            { day: 3, title: "Ha Long Bay", description: "Cruise Halong Bay overnight.", activities: ["Ha Long Bay Cruise"] },
-            { day: 4, title: "Ha Long – Hoi An", description: "Island kayaking, fly to Hoi An.", activities: ["Kayaking", "Ancient Town"] },
-            { day: 5, title: "Hoi An", description: "Ancient Town lantern festival and cooking.", activities: ["Lantern Festival", "Cooking Class"] },
-            { day: 6, title: "Ho Chi Minh City", description: "Fly to HCMC. War Remnants Museum.", activities: ["War Museum", "Reunification Palace"] },
-            { day: 7, title: "Cu Chi Tunnels", description: "Cu Chi Tunnels tour.", activities: ["Cu Chi Tunnels"] },
-            { day: 8, title: "Departure", description: "Transfer to airport.", activities: ["Airport Drop"] }
-        ],
-        inclusions: ["Hotels", "Ha Long Bay Cruise", "Breakfast", "Transfers", "Tours"],
-        exclusions: ["International Flights", "Lunch & Dinner", "Visa"],
-        images: ["https://images.unsplash.com/photo-1540611025311-01df3cef54b5?w=800"],
-        highlights: ["Ha Long Bay", "Hoi An Lanterns", "Cu Chi Tunnels", "Street Food"],
-        validFrom: new Date(), validTo: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-        isActive: true
-    },
-    // ── Domestic ─────────────────────────────────────────────
-    {
-        title: "Kerala God's Own Country",
-        type: "domestic",
-        destination: "Kerala",
-        country: "India",
-        category: ["Beach", "Nature"],
-        theme: ["Domestic"],
-        featured: true,
-        hotDeal: false,
-        duration: { days: 6, nights: 5 },
-        price: 25000,
-        pricePerPerson: 25000,
-        itinerary: [
-            { day: 1, title: "Arrival Cochin", description: "Arrive at Cochin airport. Transfer to Munnar.", activities: ["Airport Transfer"] },
-            { day: 2, title: "Munnar Sightseeing", description: "Tea gardens and Mattupetty Dam.", activities: ["Tea Museum", "Mattupetty Dam"] },
-            { day: 3, title: "Thekkady", description: "Boat ride in Periyar Lake.", activities: ["Periyar Lake", "Spice Plantation"] },
-            { day: 4, title: "Alleppey Houseboat", description: "Traditional houseboat stay.", activities: ["Houseboat Cruise"] },
-            { day: 5, title: "Kovalam Beach", description: "Relax at Kovalam Beach.", activities: ["Beach Leisure"] },
-            { day: 6, title: "Departure", description: "Transfer to Cochin airport.", activities: ["Airport Drop"] }
-        ],
-        inclusions: ["Accommodation", "Breakfast", "Houseboat Stay", "Transfers", "Sightseeing"],
-        exclusions: ["Airfare", "Lunch & Dinner", "Personal Expenses"],
-        images: ["https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=800", "https://images.unsplash.com/photo-1593693396885-5b589cd5bec4?w=800"],
-        highlights: ["Houseboat Stay", "Tea Gardens", "Periyar Wildlife", "Backwaters"],
-        validFrom: new Date(), validTo: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-        isActive: true
-    },
-    {
-        title: "Himachal Mountain Magic – Shimla & Manali",
-        type: "domestic",
-        destination: "Manali",
-        country: "India",
-        category: ["Nature", "Adventure"],
-        theme: ["Domestic"],
-        featured: true,
-        hotDeal: true,
-        duration: { days: 7, nights: 6 },
-        price: 18000,
-        pricePerPerson: 18000,
-        itinerary: [
-            { day: 1, title: "Delhi to Shimla", description: "Drive from Delhi to Shimla.", activities: ["Scenic Drive"] },
-            { day: 2, title: "Shimla Sightseeing", description: "Kufri, Mall Road and Christ Church.", activities: ["Kufri", "Mall Road", "Christ Church"] },
-            { day: 3, title: "Shimla to Manali", description: "Drive to Manali via Kullu.", activities: ["Kullu Rafting"] },
-            { day: 4, title: "Manali Sightseeing", description: "Solang Valley and Hadimba Temple.", activities: ["Solang Valley", "Hadimba Temple", "Rohtang Pass"] },
-            { day: 5, title: "Manali Adventure", description: "Paragliding and River rafting.", activities: ["Paragliding", "River Rafting"] },
-            { day: 6, title: "Manali to Chandigarh", description: "Drive to Chandigarh.", activities: ["Rock Garden"] },
-            { day: 7, title: "Departure Delhi", description: "Drive back or fly from Chandigarh.", activities: ["Drop at Delhi"] }
-        ],
-        inclusions: ["AC Transport", "Hotels", "Breakfast & Dinner", "Sightseeing"],
-        exclusions: ["Airfare", "Lunch", "Entry Fees"],
-        images: ["https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=800", "https://images.unsplash.com/photo-1588873280036-7cbdf569229b?w=800"],
-        highlights: ["Snow Points", "Rohtang Pass", "Paragliding", "Mall Road"],
-        validFrom: new Date(), validTo: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-        isActive: true
-    },
-    {
-        title: "Rajasthan Royal Heritage Tour",
-        type: "domestic",
-        destination: "Rajasthan",
-        country: "India",
-        category: ["Heritage", "Cultural"],
-        theme: ["Domestic"],
-        featured: false,
-        hotDeal: true,
-        duration: { days: 8, nights: 7 },
-        price: 22000,
-        pricePerPerson: 22000,
-        itinerary: [
-            { day: 1, title: "Arrival Jaipur", description: "Arrive in the Pink City.", activities: ["Hotel Check-in"] },
-            { day: 2, title: "Jaipur Forts", description: "Amber Fort, Hawa Mahal and City Palace.", activities: ["Amber Fort", "Hawa Mahal"] },
-            { day: 3, title: "Jaipur – Jodhpur", description: "Drive to Jodhpur via Ajmer.", activities: ["Dargah Ajmer Sharif"] },
-            { day: 4, title: "Jodhpur – Blue City", description: "Mehrangarh Fort and Jaswant Thada.", activities: ["Mehrangarh Fort", "Clock Tower Market"] },
-            { day: 5, title: "Jodhpur – Jaisalmer", description: "Drive to the Golden City.", activities: ["Desert Drive"] },
-            { day: 6, title: "Jaisalmer", description: "Jaisalmer Fort, Havelis, Desert Safari.", activities: ["Jaisalmer Fort", "Sam Dunes", "Camel Ride"] },
-            { day: 7, title: "Jaisalmer – Bikaner", description: "Drive to Bikaner. Junagarh Fort.", activities: ["Junagarh Fort"] },
-            { day: 8, title: "Departure", description: "Transfer to airport/railway.", activities: ["Drop"] }
-        ],
-        inclusions: ["Heritage Hotel", "Breakfast", "AC Coach", "Sightseeing", "Desert Safari"],
-        exclusions: ["Airfare", "Lunch & Dinner", "Tips"],
-        images: ["https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=800", "https://images.unsplash.com/photo-1530541930197-ff16ac917b0e?w=800"],
-        highlights: ["Amber Fort", "Desert Safari", "Sam Dunes", "Hawa Mahal"],
-        validFrom: new Date(), validTo: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-        isActive: true
-    },
-    {
-        title: "Goa – Sun, Sand & Party",
-        type: "domestic",
-        destination: "Goa",
-        country: "India",
-        category: ["Beach", "Leisure"],
-        theme: ["Domestic"],
-        featured: true,
-        hotDeal: false,
-        duration: { days: 5, nights: 4 },
-        price: 14000,
-        pricePerPerson: 14000,
-        itinerary: [
-            { day: 1, title: "Arrival Goa", description: "Arrive Goa airport. Transfer to resort.", activities: ["Resort Check-in"] },
-            { day: 2, title: "North Goa Tour", description: "Calangute, Baga, Fort Aguada, Cruise.", activities: ["Baga Beach", "Fort Aguada", "Mandovi Cruise"] },
-            { day: 3, title: "South Goa", description: "Colva Beach, Palolem, Old Goa Churches.", activities: ["Basilica of Bom Jesus", "Palolem Beach"] },
-            { day: 4, title: "Leisure & Water Sports", description: "Water sports, beach shacks, sunset.", activities: ["Jet Ski", "Parasailing", "Beach Shack"] },
-            { day: 5, title: "Departure", description: "Transfer to airport.", activities: ["Airport Drop"] }
-        ],
-        inclusions: ["Beach Resort", "Breakfast", "North & South Goa Tour", "Transfers"],
-        exclusions: ["Flights", "Lunch & Dinner", "Water Sports"],
-        images: ["https://images.unsplash.com/photo-1614082242765-7c98ca0f3df3?w=800", "https://images.unsplash.com/photo-1532375810709-75b1da00537c?w=800"],
-        highlights: ["Baga Beach", "Fort Aguada", "Old Goa Churches", "Nightlife"],
-        validFrom: new Date(), validTo: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-        isActive: true
-    },
-    {
-        title: "Andaman Nicobar – Pearl of the Ocean",
-        type: "domestic",
-        destination: "Andaman",
-        country: "India",
-        category: ["Beach", "Adventure"],
-        theme: ["Domestic"],
-        featured: false,
-        hotDeal: false,
-        duration: { days: 6, nights: 5 },
-        price: 32000,
-        pricePerPerson: 32000,
-        itinerary: [
-            { day: 1, title: "Arrival Port Blair", description: "Arrive Port Blair.", activities: ["Cellular Jail Light & Sound Show"] },
-            { day: 2, title: "Port Blair Tour", description: "Cellular Jail and Corbyn's Cove Beach.", activities: ["Cellular Jail", "Corbyn's Cove"] },
-            { day: 3, title: "Havelock Island", description: "Ferry to Havelock. Radhanagar Beach.", activities: ["Radhanagar Beach"] },
-            { day: 4, title: "Scuba Diving", description: "Scuba diving and Elephant Beach snorkeling.", activities: ["Scuba Diving", "Elephant Beach"] },
-            { day: 5, title: "Neil Island", description: "Ferry to Neil Island. Natural Bridge.", activities: ["Natural Bridge", "Bharatpur Beach"] },
-            { day: 6, title: "Departure", description: "Ferry back. Transfer to airport.", activities: ["Airport Drop"] }
-        ],
-        inclusions: ["Hotels", "Breakfast", "Ferry Tickets", "Cellular Jail Entry", "Sightseeing"],
-        exclusions: ["Airfare to Port Blair", "Scuba Diving", "Lunch & Dinner"],
-        images: ["https://images.unsplash.com/photo-1540979388789-6cee28a1cdc9?w=800"],
-        highlights: ["Radhanagar Beach", "Scuba Diving", "Cellular Jail", "Neil Island"],
-        validFrom: new Date(), validTo: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-        isActive: true
-    }
+    // ── Domestic Packages ──
+    { title: 'Enchanting Kerala Backwaters', description: 'Explore the serene backwaters of Kerala with houseboat stays, spice plantations, and pristine beaches. Includes Kochi, Munnar, Alleppey & Kovalam.', type: 'domestic', destination: 'Kerala', country: 'India', duration: { days: 6, nights: 5 }, price: 24999, pricePerPerson: 24999, highlights: ['Houseboat Stay in Alleppey', 'Munnar Tea Plantations', 'Kathakali Dance Show', 'Kovalam Beach'], inclusions: ['5-star Accommodation', 'All Meals', 'AC Transportation', 'English Guide', 'Entry Fees', 'Houseboat Stay'], exclusions: ['Flights', 'Personal Expenses', 'Tips', 'Travel Insurance'], itinerary: [{ day: 1, title: 'Arrival in Kochi', description: 'Arrive at Cochin Airport. Visit Fort Kochi, Chinese Fishing Nets.', activities: ['Airport Transfer', 'Fort Kochi Tour', 'Chinese Fishing Nets'] }, { day: 2, title: 'Kochi to Munnar', description: 'Drive to Munnar through scenic routes. Visit tea plantations.', activities: ['Scenic Drive', 'Tea Plantation Visit', 'Eravikulam National Park'] }, { day: 3, title: 'Munnar Sightseeing', description: 'Full day exploring Munnar hilltops and waterfalls.', activities: ['Top Station Visit', 'Mattupetty Dam', 'Echo Point'] }, { day: 4, title: 'Munnar to Alleppey', description: 'Drive to Alleppey. Board houseboat for overnight cruise.', activities: ['Spice Plantation Visit', 'Houseboat Cruise', 'Backwater Sunset'] }, { day: 5, title: 'Alleppey to Kovalam', description: 'Morning drive to Kovalam beach. Evening at leisure.', activities: ['Beach Activities', 'Lighthouse Visit', 'Seafood Dinner'] }, { day: 6, title: 'Departure', description: 'Transfer to Trivandrum airport for departure.', activities: ['Beach Sunrise', 'Airport Transfer'] }], category: ['Nature', 'Beach', 'Romantic'], featured: true, hotDeal: false, images: ['https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=800', 'https://images.unsplash.com/photo-1593693397690-362cb9666fc2?w=800'] },
+    { title: 'Royal Rajasthan Explorer', description: 'Journey through the land of kings – Jaipur, Jodhpur, Udaipur & Jaisalmer with palace stays and desert camping.', type: 'domestic', destination: 'Rajasthan', country: 'India', duration: { days: 8, nights: 7 }, price: 32999, pricePerPerson: 32999, highlights: ['Amber Fort Elephant Ride', 'Desert Safari in Jaisalmer', 'Lake Palace Udaipur', 'Mehrangarh Fort'], inclusions: ['Heritage Hotel Stays', 'Breakfast & Dinner', 'AC Transportation', 'Guide', 'Camel Safari', 'Cultural Shows'], exclusions: ['Flights', 'Lunch', 'Personal Expenses', 'Camera Fees'], itinerary: [{ day: 1, title: 'Arrive Jaipur', description: 'Arrive in Pink City. Evening Hawa Mahal & bazaar walk.', activities: ['Airport Pickup', 'Hawa Mahal', 'Bapu Bazaar'] }, { day: 2, title: 'Jaipur Forts', description: 'Visit Amber Fort, City Palace, Jantar Mantar.', activities: ['Amber Fort', 'City Palace', 'Jantar Mantar'] }, { day: 3, title: 'Jaipur to Jodhpur', description: 'Drive to Blue City. Visit Mehrangarh Fort.', activities: ['Mehrangarh Fort', 'Jaswant Thada', 'Blue City Walk'] }, { day: 4, title: 'Jodhpur to Jaisalmer', description: 'Drive to Golden City. Desert camping.', activities: ['Scenic Drive', 'Jaisalmer Fort', 'Desert Camp'] }, { day: 5, title: 'Jaisalmer', description: 'Morning desert safari. Visit Patwon Ki Haveli.', activities: ['Camel Safari', 'Patwon Ki Haveli', 'Sam Sand Dunes'] }, { day: 6, title: 'Jaisalmer to Udaipur', description: 'Long drive to City of Lakes.', activities: ['Scenic Drive', 'Evening Lake Pichola Boat Ride'] }, { day: 7, title: 'Udaipur', description: 'City Palace, Saheliyon Ki Bari, evening cultural show.', activities: ['City Palace', 'Saheliyon Ki Bari', 'Cultural Show'] }, { day: 8, title: 'Departure', description: 'Morning transfer to airport.', activities: ['Sunrise Over Lake', 'Airport Transfer'] }], category: ['Heritage', 'Adventure', 'City'], featured: true, hotDeal: true, images: ['https://images.unsplash.com/photo-1477587458883-47145ed94245?w=800'] },
+    { title: 'Goa Beach Paradise', description: 'Sun, sand and seafood! Experience the best of Goa with beach parties, water sports and Portuguese heritage.', type: 'domestic', destination: 'Goa', country: 'India', duration: { days: 5, nights: 4 }, price: 15999, pricePerPerson: 15999, highlights: ['Water Sports at Calangute', 'Old Goa Churches', 'Dudhsagar Falls', 'Night Cruise on Mandovi'], inclusions: ['Beach Resort Stay', 'Breakfast', 'Sightseeing', 'Water Sports (1 session)', 'Night Cruise'], exclusions: ['Flights', 'Lunch & Dinner', 'Personal Expenses'], itinerary: [{ day: 1, title: 'Arrive Goa', description: 'Check into beach resort. Evening beach walk.', activities: ['Airport Transfer', 'Beach Resort Check-in', 'Sunset at Beach'] }, { day: 2, title: 'North Goa Beaches', description: 'Visit Calangute, Baga, Anjuna beaches.', activities: ['Calangute Beach', 'Water Sports', 'Anjuna Flea Market'] }, { day: 3, title: 'Old Goa Heritage', description: 'Visit Basilica of Bom Jesus, Se Cathedral.', activities: ['Old Goa Churches', 'Fontainhas Latin Quarter', 'Mandovi Night Cruise'] }, { day: 4, title: 'South Goa', description: 'Explore peaceful South Goa beaches.', activities: ['Palolem Beach', 'Cabo de Rama Fort', 'Colva Beach'] }, { day: 5, title: 'Departure', description: 'Morning at leisure. Airport transfer.', activities: ['Beach Breakfast', 'Shopping', 'Airport Transfer'] }], category: ['Beach', 'Adventure', 'City'], featured: false, hotDeal: true, images: ['https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=800'] },
+    { title: 'Himalayan Adventure – Manali & Shimla', description: 'Mountain escape with adventure sports, scenic valleys and colonial hill stations.', type: 'domestic', destination: 'Himachal Pradesh', country: 'India', duration: { days: 7, nights: 6 }, price: 19999, pricePerPerson: 19999, highlights: ['Rohtang Pass', 'Solang Valley Adventure', 'Mall Road Shimla', 'River Rafting'], inclusions: ['Hotel Stay', 'All Meals', 'AC Volvo Transport', 'Sightseeing', 'Adventure Activity'], exclusions: ['Flights to Delhi', 'Personal Expenses', 'Optional Activities'], itinerary: [{ day: 1, title: 'Delhi to Shimla', description: 'Overnight Volvo from Delhi to Shimla.', activities: ['Delhi Pickup', 'Volvo Journey'] }, { day: 2, title: 'Shimla', description: 'Mall Road, Ridge, Jakhu Temple.', activities: ['Mall Road Walk', 'Ridge', 'Jakhu Temple'] }, { day: 3, title: 'Shimla to Manali', description: 'Scenic drive through Kullu Valley.', activities: ['Kullu Valley', 'River Crossing', 'Hotel Check-in'] }, { day: 4, title: 'Manali Sightseeing', description: 'Hadimba Temple, Vashisht Hot Springs.', activities: ['Hadimba Temple', 'Vashisht Hot Springs', 'Old Manali'] }, { day: 5, title: 'Solang Valley', description: 'Adventure day – paragliding, zorbing.', activities: ['Paragliding', 'Zorbing', 'Snow Activities'] }, { day: 6, title: 'Rohtang Pass', description: 'Day trip to Rohtang Pass (subject to weather).', activities: ['Rohtang Pass', 'Snow Point', 'Return to Manali'] }, { day: 7, title: 'Return', description: 'Morning departure. Volvo back to Delhi.', activities: ['Morning Packing', 'Volvo Journey', 'Delhi Drop'] }], category: ['Adventure', 'Nature', 'Romantic'], featured: true, hotDeal: false, images: ['https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=800'] },
+    { title: 'Andaman Island Getaway', description: 'Crystal clear waters, coral reefs and pristine beaches on the Andaman Islands.', type: 'domestic', destination: 'Andaman & Nicobar', country: 'India', duration: { days: 6, nights: 5 }, price: 28999, pricePerPerson: 28999, highlights: ['Scuba Diving at Havelock', 'Radhanagar Beach', 'Cellular Jail Light Show', 'Glass Bottom Boat'], inclusions: ['Resort Stay', 'Breakfast & Dinner', 'Ferry Transfers', 'Sightseeing', 'Scuba Diving (1 session)'], exclusions: ['Flights', 'Lunch', 'Personal Expenses', 'Water Sports (extra)'], itinerary: [{ day: 1, title: 'Arrive Port Blair', description: 'Arrive at Port Blair. Evening Cellular Jail Light Show.', activities: ['Airport Transfer', 'Cellular Jail', 'Light & Sound Show'] }, { day: 2, title: 'Port Blair Sightseeing', description: 'Ross Island, North Bay Island.', activities: ['Ross Island', 'North Bay Coral', 'Glass Bottom Boat'] }, { day: 3, title: 'Havelock Island', description: 'Ferry to Havelock. Visit Radhanagar Beach.', activities: ['Ferry to Havelock', 'Radhanagar Beach', 'Beach Sunset'] }, { day: 4, title: 'Havelock Activities', description: 'Scuba diving and snorkeling at Elephant Beach.', activities: ['Scuba Diving', 'Elephant Beach', 'Snorkeling'] }, { day: 5, title: 'Neil Island', description: 'Day trip to Neil Island. Lakshmanpur Beach.', activities: ['Ferry to Neil Island', 'Lakshmanpur Beach', 'Natural Bridge'] }, { day: 6, title: 'Departure', description: 'Return to Port Blair. Airport transfer.', activities: ['Ferry to Port Blair', 'Shopping', 'Airport Transfer'] }], category: ['Beach', 'Adventure'], featured: false, hotDeal: false, images: ['https://images.unsplash.com/photo-1544550581-5f7ceaf7f992?w=800'] },
+    { title: 'Kashmir – Heaven on Earth', description: 'Explore the paradise of India with Dal Lake, Gulmarg meadows and Pahalgam valleys.', type: 'domestic', destination: 'Kashmir', country: 'India', duration: { days: 7, nights: 6 }, price: 26999, pricePerPerson: 26999, highlights: ['Shikara Ride on Dal Lake', 'Gulmarg Gondola Ride', 'Pahalgam Valley', 'Mughal Gardens'], inclusions: ['Houseboat + Hotel Stay', 'All Meals', 'Transportation', 'Shikara Ride', 'Gondola Ride'], exclusions: ['Flights', 'Personal Expenses', 'Pony Rides', 'Shopping'], itinerary: [{ day: 1, title: 'Arrive Srinagar', description: 'Arrive at Srinagar. Check into houseboat on Dal Lake.', activities: ['Airport Transfer', 'Houseboat Check-in', 'Shikara Ride'] }, { day: 2, title: 'Srinagar Gardens', description: 'Visit Mughal Gardens – Nishat, Shalimar, Chashme Shahi.', activities: ['Nishat Bagh', 'Shalimar Bagh', 'Chashme Shahi'] }, { day: 3, title: 'Gulmarg', description: 'Day trip to Gulmarg. Gondola ride to Apharwat Peak.', activities: ['Drive to Gulmarg', 'Gondola Ride', 'Meadow Walk'] }, { day: 4, title: 'Pahalgam', description: 'Drive to Pahalgam through pine forests.', activities: ['Betaab Valley', 'Aru Valley', 'Chandanwari'] }, { day: 5, title: 'Pahalgam Activities', description: 'Horse riding, fishing, or trekking.', activities: ['Horse Riding', 'Lidder River Walk', 'Local Market'] }, { day: 6, title: 'Sonmarg', description: 'Day trip to Sonmarg – Glacier of Gold.', activities: ['Thajiwas Glacier', 'Meadow Walk', 'Photography'] }, { day: 7, title: 'Departure', description: 'Transfer to Srinagar Airport.', activities: ['Morning Walk', 'Shopping', 'Airport Transfer'] }], category: ['Nature', 'Adventure', 'Romantic'], featured: true, hotDeal: true, images: ['https://images.unsplash.com/photo-1587474260584-136574528ed5?w=800'] },
+    // ── International Packages ──
+    { title: 'Dubai & Abu Dhabi Explorer', description: 'Experience luxury and adventure in the UAE – desert safari, Burj Khalifa, and theme parks.', type: 'international', destination: 'Dubai', country: 'UAE', duration: { days: 6, nights: 5 }, price: 54999, pricePerPerson: 54999, highlights: ['Burj Khalifa At The Top', 'Desert Safari with BBQ', 'Abu Dhabi City Tour', 'Dubai Marina Cruise'], inclusions: ['4-star Hotel', 'Breakfast', 'Airport Transfers', 'Desert Safari', 'City Tours', 'Dhow Cruise'], exclusions: ['Flights', 'Visa', 'Lunch & Dinner', 'Theme Park Tickets'], itinerary: [{ day: 1, title: 'Arrive Dubai', description: 'Arrive at Dubai Airport. Transfer to hotel.', activities: ['Airport Transfer', 'Dubai Mall', 'Burj Khalifa View'] }, { day: 2, title: 'Dubai City Tour', description: 'Old Dubai, Gold Souk, Dubai Museum.', activities: ['Dubai Creek', 'Gold Souk', 'Dubai Museum', 'Abra Ride'] }, { day: 3, title: 'Desert Safari', description: 'Evening desert safari with dune bashing.', activities: ['Dune Bashing', 'Camel Ride', 'BBQ Dinner', 'Belly Dance Show'] }, { day: 4, title: 'Modern Dubai', description: 'Palm Jumeirah, Atlantis, Dubai Marina.', activities: ['Palm Jumeirah', 'Marina Walk', 'Dhow Cruise Dinner'] }, { day: 5, title: 'Abu Dhabi Day Trip', description: 'Visit Sheikh Zayed Mosque, Yas Island.', activities: ['Sheikh Zayed Mosque', 'Corniche', 'Yas Island'] }, { day: 6, title: 'Departure', description: 'Morning shopping at Dubai Mall. Airport transfer.', activities: ['Dubai Mall Shopping', 'Airport Transfer'] }], category: ['Luxury', 'City', 'Adventure'], featured: true, hotDeal: true, images: ['https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800'] },
+    { title: 'Magical Thailand', description: 'Bangkok temples, Pattaya beaches and Phuket islands – the complete Thailand experience.', type: 'international', destination: 'Thailand', country: 'Thailand', duration: { days: 7, nights: 6 }, price: 39999, pricePerPerson: 39999, highlights: ['Grand Palace Bangkok', 'Phi Phi Islands Tour', 'Pattaya Coral Island', 'Thai Cooking Class'], inclusions: ['Hotel Stay', 'Daily Breakfast', 'Airport Transfers', 'Sightseeing', 'Island Tour'], exclusions: ['Flights', 'Visa', 'Lunch & Dinner', 'Optional Activities'], itinerary: [{ day: 1, title: 'Arrive Bangkok', description: 'Arrive in Bangkok. Hotel check-in & night market.', activities: ['Airport Transfer', 'Night Market', 'Thai Street Food'] }, { day: 2, title: 'Bangkok Temples', description: 'Grand Palace, Wat Pho, Wat Arun.', activities: ['Grand Palace', 'Wat Pho', 'Wat Arun', 'Chao Phraya River'] }, { day: 3, title: 'Bangkok to Pattaya', description: 'Drive to Pattaya. Coral Island trip.', activities: ['Coral Island', 'Water Sports', 'Walking Street'] }, { day: 4, title: 'Pattaya', description: 'Nong Nooch Garden, Art in Paradise.', activities: ['Nong Nooch Garden', 'Art in Paradise', 'Alcazar Show'] }, { day: 5, title: 'Fly to Phuket', description: 'Flight to Phuket. Evening at Patong Beach.', activities: ['Flight to Phuket', 'Patong Beach', 'Bangla Road'] }, { day: 6, title: 'Phi Phi Islands', description: 'Full day Phi Phi Islands speedboat tour.', activities: ['Phi Phi Islands', 'Maya Bay', 'Snorkeling', 'Monkey Beach'] }, { day: 7, title: 'Departure', description: 'Morning at leisure. Airport transfer.', activities: ['Beach Morning', 'Shopping', 'Airport Transfer'] }], category: ['Beach', 'City', 'Adventure'], featured: true, hotDeal: false, images: ['https://images.unsplash.com/photo-1528181304800-259b08848526?w=800'] },
+    { title: 'Singapore & Malaysia Combo', description: 'Two countries, one amazing trip – Gardens by the Bay, Universal Studios, and KL Twin Towers.', type: 'international', destination: 'Singapore & Malaysia', country: 'Singapore', duration: { days: 7, nights: 6 }, price: 49999, pricePerPerson: 49999, highlights: ['Gardens by the Bay', 'Universal Studios', 'Petronas Twin Towers', 'Sentosa Island'], inclusions: ['4-star Hotels', 'Breakfast', 'Airport & Land Transfers', 'City Tours', 'USS Ticket', 'Night Safari'], exclusions: ['Flights', 'Visa', 'Lunch & Dinner', 'Personal Shopping'], itinerary: [{ day: 1, title: 'Arrive Singapore', description: 'Arrive at Changi Airport. Marina Bay evening walk.', activities: ['Airport Transfer', 'Marina Bay Sands', 'Light Show'] }, { day: 2, title: 'Singapore City', description: 'Gardens by the Bay, Merlion Park, Chinatown.', activities: ['Gardens by the Bay', 'Merlion Park', 'Chinatown', 'Night Safari'] }, { day: 3, title: 'Sentosa Island', description: 'Full day at Universal Studios Singapore.', activities: ['Universal Studios', 'Sentosa Beach', 'Wings of Time Show'] }, { day: 4, title: 'Singapore to KL', description: 'Bus/flight to Kuala Lumpur.', activities: ['Transfer to KL', 'Petronas Towers Evening View', 'Jalan Alor Food Street'] }, { day: 5, title: 'KL City Tour', description: 'Batu Caves, KL Tower, Central Market.', activities: ['Batu Caves', 'KL Tower', 'Central Market', 'Bukit Bintang'] }, { day: 6, title: 'Genting Highlands', description: 'Day trip to Genting Highlands.', activities: ['Genting Cable Car', 'Sky Casino', 'Theme Park', 'Shopping'] }, { day: 7, title: 'Departure', description: 'Morning at leisure. KLIA airport transfer.', activities: ['Last-minute Shopping', 'Airport Transfer'] }], category: ['City', 'Adventure', 'Family'], featured: false, hotDeal: true, images: ['https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=800'] },
+    { title: 'Bali – Island of Gods', description: 'Explore Bali with its rice terraces, ancient temples, and stunning beach clubs.', type: 'international', destination: 'Bali', country: 'Indonesia', duration: { days: 6, nights: 5 }, price: 42999, pricePerPerson: 42999, highlights: ['Ubud Rice Terraces', 'Tanah Lot Temple', 'Kintamani Volcano', 'Seminyak Beach Club'], inclusions: ['Villa/Hotel Stay', 'Breakfast', 'Airport Transfers', 'Tours', 'Entrance Fees'], exclusions: ['Flights', 'Visa on Arrival', 'Lunch & Dinner', 'Water Sports'], itinerary: [{ day: 1, title: 'Arrive Bali', description: 'Arrive at Ngurah Rai Airport. Transfer to Seminyak.', activities: ['Airport Transfer', 'Seminyak Beach', 'Welcome Dinner'] }, { day: 2, title: 'Ubud Cultural Tour', description: 'Tegallalang Rice Terraces, Monkey Forest, Art Market.', activities: ['Rice Terraces', 'Monkey Forest', 'Art Market', 'Coffee Plantation'] }, { day: 3, title: 'Temple Tour', description: 'Tanah Lot sunset, Uluwatu Temple.', activities: ['Tanah Lot Temple', 'Uluwatu Temple', 'Kecak Fire Dance'] }, { day: 4, title: 'Kintamani & Water Temple', description: 'Volcano views and Tirta Empul purification.', activities: ['Kintamani Sunrise', 'Tirta Empul', 'Tegenungan Waterfall'] }, { day: 5, title: 'Beach Day', description: 'Nusa Penida Island day trip.', activities: ['Speedboat to Nusa Penida', 'Kelingking Beach', 'Angel Billabong', 'Snorkeling'] }, { day: 6, title: 'Departure', description: 'Morning spa treatment. Airport transfer.', activities: ['Balinese Spa', 'Shopping', 'Airport Transfer'] }], category: ['Beach', 'Romantic', 'Adventure'], featured: true, hotDeal: false, images: ['https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800'] },
+    { title: 'Maldives Luxury Escape', description: 'Overwater villas, crystal clear waters, and world-class diving in the Maldives.', type: 'international', destination: 'Maldives', country: 'Maldives', duration: { days: 5, nights: 4 }, price: 79999, pricePerPerson: 79999, highlights: ['Overwater Villa Stay', 'Scuba Diving', 'Sunset Dolphin Cruise', 'Underwater Restaurant'], inclusions: ['Overwater Villa', 'All-inclusive Meals', 'Speedboat Transfers', 'Snorkeling', 'Dolphin Cruise'], exclusions: ['Flights', 'Scuba Diving', 'Spa', 'Premium Drinks'], itinerary: [{ day: 1, title: 'Arrive Maldives', description: 'Arrive at Malé. Speedboat to resort.', activities: ['Speedboat Transfer', 'Villa Check-in', 'Beach Welcome'] }, { day: 2, title: 'Ocean Activities', description: 'Snorkeling, kayaking, and paddleboarding.', activities: ['Snorkeling Trip', 'Kayaking', 'Stand-up Paddleboarding'] }, { day: 3, title: 'Island Exploration', description: 'Sunrise yoga, local island visit.', activities: ['Sunrise Yoga', 'Local Island Visit', 'Cultural Tour', 'Underwater Dining'] }, { day: 4, title: 'Dolphin Cruise', description: 'Sunset dolphin watching cruise.', activities: ['Beach Morning', 'Spa Treatment', 'Sunset Dolphin Cruise', 'Stars Dinner'] }, { day: 5, title: 'Departure', description: 'Morning swim. Speedboat to airport.', activities: ['Final Beach Time', 'Speedboat Transfer', 'Airport'] }], category: ['Luxury', 'Beach', 'Romantic', 'Honeymoon'], featured: true, hotDeal: false, images: ['https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=800'] },
+    { title: 'European Highlights', description: '10-day whirlwind tour of Europe covering Paris, Switzerland, and Rome.', type: 'international', destination: 'Europe', country: 'France', duration: { days: 10, nights: 9 }, price: 129999, pricePerPerson: 129999, highlights: ['Eiffel Tower', 'Swiss Alps', 'Colosseum Rome', 'Venice Gondola'], inclusions: ['3-star Hotels', 'Breakfast', 'Coach Transport', 'City Tours', 'Guide'], exclusions: ['Flights', 'Visa', 'Lunch & Dinner', 'Entry Tickets', 'Tips'], itinerary: [{ day: 1, title: 'Arrive Paris', description: 'Arrive in Paris. Evening Eiffel Tower visit.', activities: ['Airport Transfer', 'Eiffel Tower', 'Seine Cruise'] }, { day: 2, title: 'Paris City', description: 'Louvre Museum, Notre Dame, Champs-Élysées.', activities: ['Louvre Museum', 'Arc de Triomphe', 'Champs-Élysées'] }, { day: 3, title: 'Paris to Zurich', description: 'TGV to Zurich. Swiss lakeside walk.', activities: ['Train to Zurich', 'Lake Zurich Walk', 'Old Town'] }, { day: 4, title: 'Interlaken', description: 'Swiss Alps, Jungfrau region.', activities: ['Drive to Interlaken', 'Jungfraujoch', 'Alpine Views'] }, { day: 5, title: 'Lucerne', description: 'Chapel Bridge, Lion Monument, Mount Pilatus.', activities: ['Chapel Bridge', 'Lion Monument', 'Lake Cruise'] }, { day: 6, title: 'Zurich to Milan', description: 'Cross into Italy. Milan Cathedral.', activities: ['Train to Milan', 'Milan Cathedral', 'Galleria Vittorio'] }, { day: 7, title: 'Venice', description: 'Gondola ride, St. Mark Square.', activities: ['Train to Venice', 'St. Marks Square', 'Gondola Ride', 'Murano Island'] }, { day: 8, title: 'Florence', description: 'Duomo, Ponte Vecchio, Uffizi Gallery.', activities: ['Train to Florence', 'Duomo', 'Ponte Vecchio'] }, { day: 9, title: 'Rome', description: 'Colosseum, Vatican, Trevi Fountain.', activities: ['Colosseum', 'Vatican Museums', 'Trevi Fountain'] }, { day: 10, title: 'Departure', description: 'Morning at leisure. Airport transfer.', activities: ['Roman Holiday', 'Airport Transfer'] }], category: ['City', 'Heritage', 'Luxury'], featured: true, hotDeal: false, images: ['https://images.unsplash.com/photo-1491557345352-5929e343eb89?w=800'] },
 ];
 
-const seedPackages = async () => {
+const run = async () => {
     try {
-        await connectDB();
+        await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/travelweb');
+        console.log('Connected to MongoDB');
         await Package.deleteMany({});
-        const result = await Package.insertMany(packages);
-        console.log(`✅ ${result.length} Packages seeded successfully!`);
-        process.exit();
-    } catch (error) {
-        console.error('❌ Error seeding packages:', error.message);
-        process.exit(1);
-    }
+        const now = new Date();
+        const validTo = new Date(now.getTime() + 365 * 86400000);
+        await Package.insertMany(packages.map(p => ({ ...p, isActive: true, validFrom: now, validTo })));
+        console.log(`Seeded ${packages.length} holiday packages.`);
+    } catch (e) { console.error(e); process.exit(1); }
+    finally { await mongoose.disconnect(); process.exit(0); }
 };
-
-seedPackages();
+run();

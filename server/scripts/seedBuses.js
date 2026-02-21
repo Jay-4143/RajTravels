@@ -1,269 +1,90 @@
-require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
+require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const mongoose = require('mongoose');
 const Bus = require('../models/bus');
-const connectDB = require('../config/db');
 
-// Helper to build a seat map
-function generateSeats(rows, cols, seatTypes, hasDeck = false) {
+const operators = ['RedBus Express', 'VRL Travels', 'SRS Travels', 'Neeta Travels', 'Orange Travels', 'Paulo Travels', 'KSRTC Premium', 'MSRTC Shivneri', 'Parveen Travels', 'Kaveri Travels', 'IntrCity SmartBus', 'Greenline Travels', 'Yatra Express', 'Hans Travels', 'Rajdhani Travels'];
+const types = ['Volvo AC', 'AC Sleeper', 'AC Seater', 'Semi-Sleeper', 'Non-AC Sleeper', 'Seater'];
+const amenityPool = ['WiFi', 'USB Charging', 'Blanket', 'Water Bottle', 'Reading Light', 'Snacks', 'Live Tracking', 'Emergency Exit', 'CCTV', 'Entertainment Screen'];
+
+const routes = [
+    { from: 'Mumbai', to: 'Pune', dur: '3h 30m', price: 350 }, { from: 'Mumbai', to: 'Goa', dur: '10h 00m', price: 850 },
+    { from: 'Mumbai', to: 'Bangalore', dur: '16h 00m', price: 1200 }, { from: 'Mumbai', to: 'Ahmedabad', dur: '8h 00m', price: 650 },
+    { from: 'Mumbai', to: 'Nashik', dur: '4h 00m', price: 400 }, { from: 'Mumbai', to: 'Shirdi', dur: '5h 30m', price: 500 },
+    { from: 'Delhi', to: 'Jaipur', dur: '5h 30m', price: 550 }, { from: 'Delhi', to: 'Chandigarh', dur: '5h 00m', price: 500 },
+    { from: 'Delhi', to: 'Agra', dur: '4h 00m', price: 400 }, { from: 'Delhi', to: 'Lucknow', dur: '8h 00m', price: 750 },
+    { from: 'Delhi', to: 'Dehradun', dur: '6h 00m', price: 600 }, { from: 'Delhi', to: 'Shimla', dur: '10h 00m', price: 900 },
+    { from: 'Delhi', to: 'Manali', dur: '14h 00m', price: 1100 }, { from: 'Delhi', to: 'Haridwar', dur: '5h 00m', price: 480 },
+    { from: 'Bangalore', to: 'Chennai', dur: '6h 00m', price: 550 }, { from: 'Bangalore', to: 'Hyderabad', dur: '10h 00m', price: 900 },
+    { from: 'Bangalore', to: 'Mysore', dur: '3h 00m', price: 300 }, { from: 'Bangalore', to: 'Goa', dur: '10h 00m', price: 950 },
+    { from: 'Bangalore', to: 'Ooty', dur: '7h 30m', price: 650 }, { from: 'Chennai', to: 'Pondicherry', dur: '3h 30m', price: 350 },
+    { from: 'Chennai', to: 'Madurai', dur: '8h 00m', price: 700 }, { from: 'Chennai', to: 'Coimbatore', dur: '9h 00m', price: 750 },
+    { from: 'Hyderabad', to: 'Vijayawada', dur: '5h 00m', price: 500 }, { from: 'Hyderabad', to: 'Tirupati', dur: '12h 00m', price: 950 },
+    { from: 'Kolkata', to: 'Siliguri', dur: '10h 00m', price: 850 }, { from: 'Pune', to: 'Goa', dur: '8h 00m', price: 700 },
+    { from: 'Pune', to: 'Shirdi', dur: '5h 00m', price: 450 }, { from: 'Jaipur', to: 'Udaipur', dur: '6h 00m', price: 550 },
+    { from: 'Jaipur', to: 'Jodhpur', dur: '5h 30m', price: 500 }, { from: 'Ahmedabad', to: 'Rajkot', dur: '4h 00m', price: 380 },
+    { from: 'Lucknow', to: 'Varanasi', dur: '5h 00m', price: 480 }, { from: 'Kochi', to: 'Munnar', dur: '4h 30m', price: 400 },
+];
+
+function generateSeats(total) {
     const seats = [];
-    const colLabels = ['A', 'B', 'C', 'D', 'E', 'F'].slice(0, cols);
-    const decks = hasDeck ? ['lower', 'upper'] : ['lower'];
-
-    for (const deck of decks) {
-        for (let r = 1; r <= rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                seats.push({
-                    seatNumber: `${deck === 'upper' ? 'U' : ''}${colLabels[c]}${r}`,
-                    type: seatTypes[c] || 'aisle',
-                    deck,
-                    isBooked: Math.random() < 0.25, // ~25% pre-booked
-                });
-            }
-        }
+    const rows = Math.ceil(total / 4);
+    const cols = ['A', 'B', 'C', 'D'];
+    const typeMap = { A: 'window', B: 'aisle', C: 'aisle', D: 'window' };
+    for (let r = 1; r <= rows; r++)for (let c = 0; c < 4 && seats.length < total; c++) {
+        seats.push({ seatNumber: `${cols[c]}${r}`, type: typeMap[cols[c]], deck: r <= rows / 2 ? 'lower' : 'upper', isBooked: Math.random() < 0.3 });
     }
     return seats;
 }
 
-const today = new Date();
-
-const buses = [
-    // ── Mumbai → Pune ──────────────────────────────────────
-    {
-        busName: 'Shivneri Express',
-        busNumber: 'MH12AB1234',
-        operatorName: 'MSRTC',
-        busType: 'AC Seater',
-        from: 'Mumbai',
-        to: 'Pune',
-        departureTime: '06:00',
-        arrivalTime: '09:30',
-        duration: '3h 30m',
-        travelDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
-        price: 350,
-        totalSeats: 40,
-        amenities: ['WiFi', 'AC', 'USB Charging', 'Water Bottle', 'Live Tracking'],
-        rating: 4.5,
-        totalRatings: 245,
-        cancellationPolicy: 'Free Cancellation',
-        liveTracking: true,
-        images: ['https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800'],
-    },
-    {
-        busName: 'Pune Rocket',
-        busNumber: 'MH12CD5678',
-        operatorName: 'RedBus Travels',
-        busType: 'Volvo AC',
-        from: 'Mumbai',
-        to: 'Pune',
-        departureTime: '07:30',
-        arrivalTime: '11:00',
-        duration: '3h 30m',
-        travelDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
-        price: 420,
-        totalSeats: 40,
-        amenities: ['WiFi', 'AC', 'Extra Legroom', 'Reading Light', 'Blanket'],
-        rating: 4.3,
-        totalRatings: 189,
-        cancellationPolicy: 'Partial Refund',
-        liveTracking: true,
-        images: ['https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=800'],
-    },
-    {
-        busName: 'NightStar Sleeper',
-        busNumber: 'MH12EF9012',
-        operatorName: 'Orange Travel',
-        busType: 'AC Sleeper',
-        from: 'Mumbai',
-        to: 'Pune',
-        departureTime: '23:00',
-        arrivalTime: '02:30',
-        duration: '3h 30m',
-        travelDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
-        price: 599,
-        totalSeats: 30,
-        amenities: ['AC', 'Sleeper Berth', 'Blanket', 'Pillow', 'Curtain'],
-        rating: 4.1,
-        totalRatings: 120,
-        cancellationPolicy: 'Partial Refund',
-        liveTracking: false,
-        images: ['https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800'],
-    },
-    // ── Delhi → Jaipur ──────────────────────────────────────
-    {
-        busName: 'Pink City Cruiser',
-        busNumber: 'DL01GH3456',
-        operatorName: 'RSRTC',
-        busType: 'Volvo AC',
-        from: 'Delhi',
-        to: 'Jaipur',
-        departureTime: '05:30',
-        arrivalTime: '10:30',
-        duration: '5h 00m',
-        travelDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
-        price: 550,
-        totalSeats: 45,
-        amenities: ['WiFi', 'AC', 'USB Charging', 'Water Bottle', 'Snacks'],
-        rating: 4.6,
-        totalRatings: 312,
-        cancellationPolicy: 'Free Cancellation',
-        liveTracking: true,
-        images: ['https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=800'],
-    },
-    {
-        busName: 'Desert Express',
-        busNumber: 'DL01IJ7890',
-        operatorName: 'Raj Travels',
-        busType: 'Semi-Sleeper',
-        from: 'Delhi',
-        to: 'Jaipur',
-        departureTime: '10:00',
-        arrivalTime: '15:30',
-        duration: '5h 30m',
-        travelDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
-        price: 450,
-        totalSeats: 35,
-        amenities: ['AC', 'Semi-Sleeper Seats', 'Movie Screen'],
-        rating: 4.0,
-        totalRatings: 156,
-        cancellationPolicy: 'Non-Refundable',
-        liveTracking: false,
-        images: ['https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800'],
-    },
-    // ── Bangalore → Chennai ──────────────────────────────────────
-    {
-        busName: 'Metro Connect',
-        busNumber: 'KA01KL2345',
-        operatorName: 'KSRTC',
-        busType: 'AC Seater',
-        from: 'Bangalore',
-        to: 'Chennai',
-        departureTime: '07:00',
-        arrivalTime: '12:30',
-        duration: '5h 30m',
-        travelDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
-        price: 650,
-        totalSeats: 40,
-        amenities: ['WiFi', 'AC', 'USB Charging', 'Snacks', 'Live Tracking'],
-        rating: 4.4,
-        totalRatings: 278,
-        cancellationPolicy: 'Free Cancellation',
-        liveTracking: true,
-        images: ['https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=800'],
-    },
-    {
-        busName: 'South Silk Road',
-        busNumber: 'KA01MN5678',
-        operatorName: 'SRS Travels',
-        busType: 'AC Sleeper',
-        from: 'Bangalore',
-        to: 'Chennai',
-        departureTime: '22:00',
-        arrivalTime: '03:30',
-        duration: '5h 30m',
-        travelDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
-        price: 850,
-        totalSeats: 30,
-        amenities: ['AC', 'Sleeper Berth', 'Blanket', 'Pillow', 'Curtain', 'Charging Port'],
-        rating: 4.7,
-        totalRatings: 198,
-        cancellationPolicy: 'Partial Refund',
-        liveTracking: true,
-        images: ['https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800'],
-    },
-    // ── Hyderabad → Goa ──────────────────────────────────────
-    {
-        busName: 'Coastal Wanderer',
-        busNumber: 'TS01OP9012',
-        operatorName: 'VRL Travels',
-        busType: 'Volvo AC',
-        from: 'Hyderabad',
-        to: 'Goa',
-        departureTime: '16:00',
-        arrivalTime: '07:00',
-        duration: '15h 00m',
-        travelDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
-        price: 1200,
-        totalSeats: 40,
-        amenities: ['WiFi', 'AC', 'Extra Legroom', 'Blanket', 'Pillow', 'Reading Light'],
-        rating: 4.3,
-        totalRatings: 134,
-        cancellationPolicy: 'Partial Refund',
-        liveTracking: true,
-        images: ['https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=800'],
-    },
-    // ── Chennai → Bangalore ──────────────────────────────────────
-    {
-        busName: 'Techno Bullet',
-        busNumber: 'TN01QR3456',
-        operatorName: 'Parveen Travels',
-        busType: 'AC Seater',
-        from: 'Chennai',
-        to: 'Bangalore',
-        departureTime: '06:30',
-        arrivalTime: '12:00',
-        duration: '5h 30m',
-        travelDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
-        price: 600,
-        totalSeats: 40,
-        amenities: ['WiFi', 'AC', 'USB Charging', 'Water Bottle'],
-        rating: 4.2,
-        totalRatings: 167,
-        cancellationPolicy: 'Free Cancellation',
-        liveTracking: false,
-        images: ['https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800'],
-    },
-    // ── Ahmedabad → Mumbai ──────────────────────────────────────
-    {
-        busName: 'Gujrat Express',
-        busNumber: 'GJ01ST7890',
-        operatorName: 'GSRTC',
-        busType: 'Non-AC Sleeper',
-        from: 'Ahmedabad',
-        to: 'Mumbai',
-        departureTime: '20:00',
-        arrivalTime: '06:00',
-        duration: '10h 00m',
-        travelDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
-        price: 750,
-        totalSeats: 36,
-        amenities: ['Sleeper Berth', 'Fan', 'Curtain'],
-        rating: 3.8,
-        totalRatings: 89,
-        cancellationPolicy: 'Non-Refundable',
-        liveTracking: false,
-        images: ['https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800'],
-    },
-];
-
-// Generate seats for each bus
-const busesWithSeats = buses.map(b => ({
-    ...b,
-    seats: generateSeats(
-        b.busType.includes('Sleeper') ? 8 : 10,
-        b.busType.includes('Sleeper') ? 4 : 4,
-        ['window', 'aisle', 'aisle', 'window'],
-        b.busType.includes('Sleeper')
-    ),
-    availableSeats: b.totalSeats, // will be adjusted below
-}));
-
-// Fix availableSeats after generating seats
-busesWithSeats.forEach(b => {
-    const booked = b.seats.filter(s => s.isBooked).length;
-    b.availableSeats = b.totalSeats - booked;
-});
-
-const seed = async () => {
+const run = async () => {
     try {
-        await connectDB();
+        await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/travelweb');
+        console.log('Connected to MongoDB');
         await Bus.deleteMany({});
-        const result = await Bus.insertMany(busesWithSeats);
-        console.log(`✅ ${result.length} buses seeded successfully!`);
-        process.exit();
-    } catch (e) {
-        console.error('❌ Error seeding buses:', e.message);
-        process.exit(1);
-    }
+        const buses = [];
+        let busNum = 1001;
+        // Generate buses for next 30 days
+        for (let d = 0; d < 30; d++) {
+            const date = new Date(Date.now() + d * 86400000);
+            date.setHours(0, 0, 0, 0);
+            for (const route of routes) {
+                // 2-4 buses per route per day
+                const count = 2 + Math.floor(Math.random() * 3);
+                for (let i = 0; i < count; i++) {
+                    const op = operators[Math.floor(Math.random() * operators.length)];
+                    const type = types[Math.floor(Math.random() * types.length)];
+                    const depH = 5 + Math.floor(Math.random() * 19); // 5am to 11pm
+                    const depM = Math.floor(Math.random() * 4) * 15;
+                    const durH = parseInt(route.dur);
+                    const durM = parseInt(route.dur.split('h ')[1]) || 0;
+                    const arrH = (depH + durH + Math.floor((depM + durM) / 60)) % 24;
+                    const arrM = (depM + durM) % 60;
+                    const priceVar = route.price + Math.floor(Math.random() * 400) - 100;
+                    const isAC = type.includes('AC') || type.includes('Volvo');
+                    const totalSeats = type.includes('Sleeper') ? 30 : 40;
+                    const amCount = 3 + Math.floor(Math.random() * 5);
+                    const amenities = [...amenityPool].sort(() => Math.random() - 0.5).slice(0, amCount);
+                    buses.push({
+                        busName: `${op} ${type}`, busNumber: `${op.slice(0, 2).toUpperCase()}${busNum++}`,
+                        operatorName: op, busType: type, from: route.from, to: route.to,
+                        departureTime: `${String(depH).padStart(2, '0')}:${String(depM).padStart(2, '0')}`,
+                        arrivalTime: `${String(arrH).padStart(2, '0')}:${String(arrM).padStart(2, '0')}`,
+                        duration: route.dur, travelDate: date,
+                        price: isAC ? priceVar + 200 : priceVar, totalSeats, availableSeats: Math.floor(totalSeats * 0.6 + Math.random() * totalSeats * 0.4),
+                        amenities, rating: 3.5 + Math.random() * 1.5, totalRatings: 50 + Math.floor(Math.random() * 500),
+                        cancellationPolicy: ['Free Cancellation', 'Partial Refund', 'Non-Refundable'][Math.floor(Math.random() * 3)],
+                        liveTracking: Math.random() > 0.4, seats: generateSeats(totalSeats), isActive: true,
+                    });
+                }
+            }
+        }
+        // Insert in batches
+        const batch = 500;
+        for (let i = 0; i < buses.length; i += batch) {
+            await Bus.insertMany(buses.slice(i, i + batch));
+        }
+        console.log(`Seeded ${buses.length} buses across 30 days.`);
+    } catch (e) { console.error(e); process.exit(1); }
+    finally { await mongoose.disconnect(); process.exit(0); }
 };
-
-seed();
+run();

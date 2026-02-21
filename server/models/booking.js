@@ -29,6 +29,8 @@ const bookingSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Flight',
   },
+  externalFlightId: String,
+  flightDetails: mongoose.Schema.Types.Mixed,
   passengers: [{
     name: String,
     age: Number,
@@ -39,6 +41,7 @@ const bookingSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Flight',
   },
+  externalReturnFlightId: String,
   tripType: {
     type: String,
     enum: ['one-way', 'round-trip'],
@@ -84,6 +87,11 @@ const bookingSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Payment',
   },
+  addons: [{
+    name: String,
+    price: Number,
+    category: String
+  }],
 }, {
   timestamps: true,
 });

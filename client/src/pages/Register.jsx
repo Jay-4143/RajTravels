@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const Register = () => {
@@ -73,6 +73,11 @@ const Register = () => {
         <button className="w-full bg-blue-600 text-white py-3 rounded hover:bg-blue-700">
           Register
         </button>
+
+        <div className="mt-4 text-center text-sm text-gray-600">
+          Already have an account?{" "}
+          <Link to="/login" className="text-blue-600 font-semibold hover:underline">Login</Link>
+        </div>
       </form>
     </div>
   );

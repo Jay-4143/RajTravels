@@ -3,22 +3,28 @@ import { useNavigate } from "react-router-dom";
 import { getPopularDestinations } from "../api/hotels";
 
 const DEST_IMAGES = {
-  Mumbai: "https://images.unsplash.com/photo-1543269865-cbf427effbad?w=600",
+  Mumbai: "https://images.unsplash.com/photo-1567157577867-05ccb1388e66?w=600",
   "New Delhi": "https://images.unsplash.com/photo-1587474260584-136574528ed5?w=600",
-  Bangalore: "https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=600",
-  Chennai: "https://images.unsplash.com/photo-1596178060812-6b8c19e28a56?w=600",
-  Goa: "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=600",
-  Jaipur: "https://images.unsplash.com/photo-1591604466107-ec97de577aff?w=600",
-  Udaipur: "https://images.unsplash.com/photo-1585829364621-fae6c9ac84cc?w=600",
-  Shimla: "https://images.unsplash.com/photo-1548013146-72479768bada?w=600",
-  Manali: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=600",
-  Ooty: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600",
+  Bangalore: "https://images.unsplash.com/photo-1596178060812-6b8c19e28a56?w=600",
+  Chennai: "https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=600",
+  Goa: "https://images.unsplash.com/photo-1513581166391-887a96ddeafd?w=600",
+  Jaipur: "https://images.unsplash.com/photo-1477587458883-47145ed31db6?w=600",
+  Udaipur: "https://images.unsplash.com/photo-1604537529428-15bcbeecfe4d?w=600",
+  Shimla: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600",
+  Manali: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=600",
+  Ooty: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600",
   Agra: "https://images.unsplash.com/photo-1564507592333-c60657eea523?w=600",
-  Kochi: "https://images.unsplash.com/photo-1528181304800-259b08848526?w=600",
-  "Port Blair": "https://images.unsplash.com/photo-1559827260-dc66d43bef33?w=600",
+  Kochi: "https://images.unsplash.com/photo-1609340981878-cd4e265a53fc?w=600",
+  "Port Blair": "https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=600",
   Dubai: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600",
-  Bangkok: "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=600",
+  Bangkok: "https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=600",
   Singapore: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=600",
+  London: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=600",
+  Mahabaleshwar: "https://images.unsplash.com/photo-1622461589396-5ec72ddb6290?w=600",
+  Kodaikanal: "https://images.unsplash.com/photo-1580323104226-68a11ba5cf99?w=600",
+  Varanasi: "https://images.unsplash.com/photo-1561361058-c24cecae35ca?w=600",
+  Darjeeling: "https://images.unsplash.com/photo-1544761634-dc512f2238a3?w=600",
+  Leh: "https://images.unsplash.com/photo-1566836610593-62a64888a251?w=600",
 };
 
 const getImage = (city) => DEST_IMAGES[city] || "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600";
@@ -41,6 +47,12 @@ const HotelPopularDestinations = ({ onCityClick }) => {
             { city: "Shimla", count: 5, minPrice: 2999 },
             { city: "Ooty", count: 4, minPrice: 1599 },
             { city: "New Delhi", count: 10, minPrice: 2299 },
+            { city: "Udaipur", count: 5, minPrice: 2199 },
+            { city: "Bangalore", count: 7, minPrice: 2399 },
+            { city: "Varanasi", count: 6, minPrice: 1799 },
+            { city: "Amritsar", count: 4, minPrice: 1899 },
+            { city: "Hyderabad", count: 8, minPrice: 2299 },
+            { city: "Kochi", count: 5, minPrice: 1999 },
           ]);
         }
       })
@@ -52,6 +64,12 @@ const HotelPopularDestinations = ({ onCityClick }) => {
           { city: "Shimla", count: 5, minPrice: 2999 },
           { city: "Ooty", count: 4, minPrice: 1599 },
           { city: "New Delhi", count: 10, minPrice: 2299 },
+          { city: "Udaipur", count: 5, minPrice: 2199 },
+          { city: "Bangalore", count: 7, minPrice: 2399 },
+          { city: "Varanasi", count: 6, minPrice: 1799 },
+          { city: "Amritsar", count: 4, minPrice: 1899 },
+          { city: "Hyderabad", count: 8, minPrice: 2299 },
+          { city: "Kochi", count: 5, minPrice: 1999 },
         ]);
       })
       .finally(() => setLoading(false));
@@ -83,6 +101,7 @@ const HotelPopularDestinations = ({ onCityClick }) => {
                 src={getImage(dest.city)}
                 alt={dest.city}
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                onError={e => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600'; }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
               <div className="absolute inset-0 flex flex-col justify-end p-4 text-white">

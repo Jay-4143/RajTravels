@@ -1,100 +1,38 @@
+require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const mongoose = require('mongoose');
-const dotenv = require('dotenv');
-const path = require('path');
-const Visa = require('../models/Visa');
-const connectDB = require('../config/db');
+const Visa = require('../models/visa');
 
-// Load env vars
-dotenv.config({ path: path.join(__dirname, '../.env') });
-
-const sampleVisas = [
-    {
-        country: 'United Arab Emirates',
-        nationality: 'Indian',
-        visaType: 'Tourist',
-        processingTime: '3-4 Days',
-        duration: '30 Days',
-        entryType: 'Single Entry',
-        validity: '58 Days',
-        cost: 7500,
-        currency: 'INR',
-        documentsRequired: ['Passport', 'Photo'],
-        description: 'Standard 30-day tourist visa for UAE.',
-        images: ['https://images.unsplash.com/photo-1512453979798-5ea904ac6605?auto=format&fit=crop&q=80&w=1000']
-    },
-    {
-        country: 'United Arab Emirates',
-        nationality: 'Indian',
-        visaType: 'Tourist',
-        processingTime: '3-4 Days',
-        duration: '60 Days',
-        entryType: 'Single Entry',
-        validity: '58 Days',
-        cost: 14500,
-        currency: 'INR',
-        documentsRequired: ['Passport', 'Photo'],
-        description: 'Longer duration 60-day tourist visa for UAE.',
-        images: ['https://images.unsplash.com/photo-1512453979798-5ea904ac6605?auto=format&fit=crop&q=80&w=1000']
-    },
-    {
-        country: 'Thailand',
-        nationality: 'All',
-        visaType: 'Tourist',
-        processingTime: '3-4 Days',
-        duration: '60 Days',
-        entryType: 'Single Entry',
-        validity: '90 Days',
-        cost: 5500,
-        currency: 'INR',
-        documentsRequired: ['Passport', 'Photo', 'Flight Ticket'],
-        description: 'Standard tourist visa for Thailand.',
-        images: ['https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?auto=format&fit=crop&q=80&w=1000']
-    },
-    {
-        country: 'Singapore',
-        nationality: 'Indian',
-        visaType: 'Tourist',
-        processingTime: '5-6 Days',
-        duration: '30 Days',
-        entryType: 'Multiple Entry',
-        validity: '2 Years',
-        cost: 3500,
-        currency: 'INR',
-        documentsRequired: ['Passport', 'Photo', 'Form 14A'],
-        description: 'Multiple entry tourist visa for Singapore.',
-        images: ['https://images.unsplash.com/photo-1525625293386-3f8f99389edd?auto=format&fit=crop&q=80&w=1000']
-    },
-    {
-        country: 'Malaysia',
-        nationality: 'Indian',
-        visaType: 'Tourist',
-        processingTime: '2-3 Days',
-        duration: '30 Days',
-        entryType: 'Single Entry',
-        validity: '90 Days',
-        cost: 2800,
-        currency: 'INR',
-        documentsRequired: ['Passport', 'Photo'],
-        description: 'eVISA for Malaysia.',
-        images: ['https://images.unsplash.com/photo-1596422846543-75c6a4d56536?auto=format&fit=crop&q=80&w=1000']
-    }
+const visas = [
+    { country: 'Thailand', visaType: 'Tourist', processingTime: '3-5 Business Days', duration: '60 Days', entryType: 'Single Entry', validity: '90 Days', cost: 2500, currency: 'INR', description: 'Visit Thailand for leisure, sightseeing, and recreation. E-Visa available with quick processing.', documentsRequired: ['Valid Passport (6 months validity)', 'Passport-size Photo', 'Hotel Booking Confirmation', 'Return Flight Ticket', 'Bank Statement (last 3 months)', 'Travel Insurance'], images: ['https://images.unsplash.com/photo-1528181304800-259b08848526?w=800'] },
+    { country: 'Dubai (UAE)', visaType: 'Tourist', processingTime: '2-4 Business Days', duration: '30 Days', entryType: 'Single Entry', validity: '58 Days', cost: 5500, currency: 'INR', description: 'Explore the vibrant city of Dubai with its luxury shopping, modern architecture, and desert adventures.', documentsRequired: ['Valid Passport', 'Passport-size Photo', 'Confirmed Hotel Booking', 'Return Flight Ticket', 'Bank Statement', 'Travel Insurance', 'Covering Letter'], images: ['https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800'] },
+    { country: 'Dubai (UAE)', visaType: 'Tourist', processingTime: '2-4 Business Days', duration: '90 Days', entryType: 'Multiple Entry', validity: '180 Days', cost: 12000, currency: 'INR', description: 'Extended stay visa for Dubai with multiple entry privileges.', documentsRequired: ['Valid Passport', 'Passport-size Photo', 'Confirmed Hotel Booking', 'Return Flight Ticket', 'Bank Statement (6 months)', 'Travel Insurance', 'NOC from Employer'], images: ['https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800'] },
+    { country: 'Singapore', visaType: 'Tourist', processingTime: '4-7 Business Days', duration: '30 Days', entryType: 'Multiple Entry', validity: '63 Days', cost: 3500, currency: 'INR', description: 'Visit the Lion City for its stunning gardens, world-class dining, and cultural diversity.', documentsRequired: ['Valid Passport', 'Passport-size Photo', 'Cover Letter', 'Hotel Booking', 'Return Flight', 'Bank Statement (3 months)', 'Employment Proof', 'Form 14A'], images: ['https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=800'] },
+    { country: 'Malaysia', visaType: 'eNTRI', processingTime: '1-2 Business Days', duration: '15 Days', entryType: 'Single Entry', validity: '90 Days', cost: 1800, currency: 'INR', description: 'Quick electronic visa for short visits to Malaysia. Perfect for weekend getaways.', documentsRequired: ['Valid Passport', 'Passport-size Photo', 'Return Flight Ticket', 'Hotel Booking', 'Bank Statement'], images: ['https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=800'] },
+    { country: 'Vietnam', visaType: 'Tourist', processingTime: '3-5 Business Days', duration: '30 Days', entryType: 'Single Entry', validity: '30 Days', cost: 2200, currency: 'INR', description: 'Discover Vietnam with its stunning landscapes from Ha Long Bay to the Mekong Delta.', documentsRequired: ['Valid Passport', 'Passport-size Photo', 'Flight Itinerary', 'Hotel Booking', 'Bank Statement'], images: ['https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=800'] },
+    { country: 'Japan', visaType: 'Tourist', processingTime: '5-7 Business Days', duration: '15 Days', entryType: 'Single Entry', validity: '90 Days', cost: 800, currency: 'INR', description: 'Experience the Land of the Rising Sun – from ancient temples to futuristic cities.', documentsRequired: ['Valid Passport', 'Passport-size Photo', 'Detailed Itinerary', 'Hotel Booking', 'Return Flight', 'Bank Statement (6 months)', 'Income Tax Returns', 'Employment Certificate', 'Invitation Letter (if applicable)'], images: ['https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800'] },
+    { country: 'South Korea', visaType: 'Tourist', processingTime: '5-7 Business Days', duration: '30 Days', entryType: 'Single Entry', validity: '90 Days', cost: 3000, currency: 'INR', description: 'Visit South Korea for K-pop, Korean cuisine, and beautiful cherry blossom seasons.', documentsRequired: ['Valid Passport', 'Passport-size Photo', 'Travel Itinerary', 'Hotel Booking', 'Return Flight', 'Bank Statement', 'Employment Proof', 'Cover Letter'], images: ['https://images.unsplash.com/photo-1538485399081-7191377e8241?w=800'] },
+    { country: 'Australia', visaType: 'Tourist', processingTime: '15-20 Business Days', duration: '90 Days', entryType: 'Multiple Entry', validity: '12 Months', cost: 9500, currency: 'INR', description: 'Explore the land Down Under – Great Barrier Reef, Sydney Opera House and vast outback.', documentsRequired: ['Valid Passport', 'Passport-size Photos', 'Cover Letter', 'Complete Itinerary', 'Hotel Booking', 'Return Flight', 'Bank Statement (6 months)', 'Income Tax Returns (3 years)', 'Employment Proof', 'Travel Insurance', 'Form 1419'], images: ['https://images.unsplash.com/photo-1523482580672-f109ba8cb9be?w=800'] },
+    { country: 'United Kingdom', visaType: 'Tourist', processingTime: '15-20 Business Days', duration: '180 Days', entryType: 'Multiple Entry', validity: '6 Months', cost: 11000, currency: 'INR', description: 'Visit the UK for its rich history, world-class museums, and stunning countryside.', documentsRequired: ['Valid Passport', 'Passport-size Photo', 'Cover Letter', 'Travel Itinerary', 'Hotel Booking', 'Return Flight', 'Bank Statement (6 months)', 'Income Tax Returns', 'Employment/Business Proof', 'Travel Insurance', 'Financial Sponsorship (if applicable)'], images: ['https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800'] },
+    { country: 'USA', visaType: 'Tourist (B1/B2)', processingTime: '30-60 Business Days', duration: '180 Days', entryType: 'Multiple Entry', validity: '10 Years', cost: 13500, currency: 'INR', description: 'Apply for a US tourist visa to explore America – from New York to the Grand Canyon.', documentsRequired: ['Valid Passport', 'DS-160 Confirmation', 'Visa Fee Receipt', 'Passport-size Photo', 'Interview Appointment', 'Bank Statement (6 months)', 'Income Tax Returns (3 years)', 'Property Documents', 'Employment Proof', 'Travel Itinerary', 'Sponsor Documents (if applicable)'], images: ['https://images.unsplash.com/photo-1485738422979-f5c462d49f04?w=800'] },
+    { country: 'Canada', visaType: 'Tourist', processingTime: '20-30 Business Days', duration: '180 Days', entryType: 'Multiple Entry', validity: '10 Years', cost: 7500, currency: 'INR', description: 'Experience Canada with its stunning natural beauty, from Niagara Falls to the Rocky Mountains.', documentsRequired: ['Valid Passport', 'Passport-size Photo', 'IMM 5257 Form', 'Travel History', 'Bank Statement (6 months)', 'Income Tax Returns', 'Employment Proof', 'Travel Insurance', 'Itinerary', 'Family Information Form'], images: ['https://images.unsplash.com/photo-1517935706615-2717063c2225?w=800'] },
+    { country: 'Schengen (Europe)', visaType: 'Tourist', processingTime: '10-15 Business Days', duration: '90 Days', entryType: 'Multiple Entry', validity: '180 Days', cost: 7200, currency: 'INR', description: 'One visa for 27 European countries – explore France, Italy, Germany, Spain and more.', documentsRequired: ['Valid Passport', 'Passport-size Photos', 'Cover Letter', 'Complete Itinerary', 'Hotel Bookings', 'Flight Tickets', 'Travel Insurance (€30,000 coverage)', 'Bank Statement (3 months)', 'Income Tax Returns', 'Employment Proof', 'Visa Application Form'], images: ['https://images.unsplash.com/photo-1491557345352-5929e343eb89?w=800'] },
+    { country: 'Turkey', visaType: 'e-Visa', processingTime: '1-2 Business Days', duration: '30 Days', entryType: 'Single Entry', validity: '180 Days', cost: 3800, currency: 'INR', description: 'Discover Turkey where East meets West – Istanbul, Cappadocia, and Mediterranean coast.', documentsRequired: ['Valid Passport', 'Return Flight Ticket', 'Hotel Booking', 'Sufficient Funds Proof'], images: ['https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=800'] },
+    { country: 'Egypt', visaType: 'e-Visa', processingTime: '3-5 Business Days', duration: '30 Days', entryType: 'Single Entry', validity: '90 Days', cost: 2500, currency: 'INR', description: 'Explore the land of Pharaohs – Pyramids, temples, and Nile cruises await.', documentsRequired: ['Valid Passport', 'Passport-size Photo', 'Hotel Booking', 'Return Flight', 'Travel Insurance'], images: ['https://images.unsplash.com/photo-1539650116574-75c0c6d73f6e?w=800'] },
+    { country: 'Sri Lanka', visaType: 'ETA', processingTime: '1-2 Business Days', duration: '30 Days', entryType: 'Double Entry', validity: '180 Days', cost: 1500, currency: 'INR', description: 'Explore the tropical island of Sri Lanka – beaches, tea plantations, and ancient ruins.', documentsRequired: ['Valid Passport', 'Return Flight Ticket', 'Hotel Booking'], images: ['https://images.unsplash.com/photo-1586613835371-9e085cbb2e8a?w=800'] },
+    { country: 'Maldives', visaType: 'On Arrival', processingTime: 'On Arrival', duration: '30 Days', entryType: 'Single Entry', validity: '30 Days', cost: 0, currency: 'INR', description: 'No advance visa needed! Get your visa on arrival in this tropical paradise.', documentsRequired: ['Valid Passport (6 months validity)', 'Return Flight Ticket', 'Hotel/Resort Booking', 'Sufficient Funds ($100/day)'], images: ['https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=800'] },
+    { country: 'Nepal', visaType: 'On Arrival', processingTime: 'On Arrival', duration: '30 Days', entryType: 'Multiple Entry', validity: '30 Days', cost: 2500, currency: 'INR', description: 'Explore the Himalayan kingdom. Indians do not need a visa – just carry valid ID.', documentsRequired: ['Valid Passport OR Voter ID', 'Passport-size Photo'], images: ['https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800'] },
+    { country: 'Bali (Indonesia)', visaType: 'Visa on Arrival', processingTime: 'On Arrival', duration: '30 Days', entryType: 'Single Entry', validity: '30 Days', cost: 3500, currency: 'INR', description: 'Get your visa on arrival in Bali. Explore temples, rice terraces, and pristine beaches.', documentsRequired: ['Valid Passport (6 months validity)', 'Return Flight Ticket', 'Hotel Booking', 'Sufficient Funds'], images: ['https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800'] },
+    { country: 'New Zealand', visaType: 'Tourist', processingTime: '20-25 Business Days', duration: '90 Days', entryType: 'Single Entry', validity: '9 Months', cost: 12000, currency: 'INR', description: 'Discover the stunning landscapes of New Zealand – mountains, fjords, and Middle-earth.', documentsRequired: ['Valid Passport', 'Passport-size Photo', 'Cover Letter', 'Travel Itinerary', 'Hotel Booking', 'Return Flight', 'Bank Statement (6 months)', 'Income Tax Returns', 'Employment Proof', 'Travel Insurance', 'Medical Certificate'], images: ['https://images.unsplash.com/photo-1469521669194-babb45599def?w=800'] },
 ];
 
-const seedData = async () => {
+const run = async () => {
     try {
-        await connectDB();
-
-        await Visa.deleteMany();
-        console.log('Existing visas cleared...');
-
-        await Visa.insertMany(sampleVisas);
-        console.log('Sample visas imported!');
-
-        process.exit();
-    } catch (err) {
-        console.error(err);
-        process.exit(1);
-    }
+        await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/travelweb');
+        console.log('Connected to MongoDB');
+        await Visa.deleteMany({});
+        await Visa.insertMany(visas.map(v => ({ ...v, isActive: true })));
+        console.log(`Seeded ${visas.length} visa entries.`);
+    } catch (e) { console.error(e); process.exit(1); }
+    finally { await mongoose.disconnect(); process.exit(0); }
 };
-
-seedData();
+run();

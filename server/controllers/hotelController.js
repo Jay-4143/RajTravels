@@ -1,15 +1,18 @@
 /**
  * Hotel Controller
  * Search, details, room availability, booking
+ * searchHotels now powered by Amadeus API with MongoDB fallback
  */
 
 const mongoose = require('mongoose');
 const Hotel = require('../models/hotel');
 const Room = require('../models/room');
 const Booking = require('../models/booking');
+const amadeusService = require('../services/amadeusService');
+const { transformHotelOffers } = require('../utils/amadeusTransformers');
 
 /**
- * @desc    Search hotels by city
+ * @desc    Search hotels by city (Amadeus API → fallback to MongoDB)
  * @route   GET /api/hotels/search
  * @access  Public
  */
@@ -17,41 +20,162 @@ exports.searchHotels = async (req, res, next) => {
   try {
     const {
       city,
+      cityCode,
+      checkIn,
+      checkOut,
+      guests = 1,
       minPrice,
       maxPrice,
       minRating,
-      starCategory,
+      starCategory, // backward compatibility
+      stars: starsQuery, // from frontend checkbox array
       amenities,
-      freeCancellation,
       propertyType,
-      checkIn,
-      checkOut,
+      chainName,
       sort = 'rating',
       order = 'desc',
       page = 1,
       limit = 20,
     } = req.query;
 
-    if (!city) {
-      return res.status(400).json({ success: false, message: 'city is required' });
+    if (!city && !cityCode) {
+      return res.status(400).json({ success: false, message: 'city or cityCode is required' });
     }
 
-    const query = { city: new RegExp(city, 'i'), isActive: true };
+    // Determine IATA city code
+    const code = cityCode || city?.toUpperCase();
+
+    try {
+      // Step 1: Get hotel IDs for the city
+      const hotelListResp = await amadeusService.searchHotelsByCity(code);
+      const hotelIds = (hotelListResp.data || [])
+        .slice(0, 20) // Limit to first 20 hotels to stay within API limits
+        .map(h => h.hotelId)
+        .filter(Boolean);
+
+      if (hotelIds.length === 0) {
+        throw new Error('No hotels found for this city in Amadeus');
+      }
+
+      // Step 2: Get offers for those hotels
+      const offersResp = await amadeusService.getHotelOffers({
+        hotelIds: hotelIds.join(','),
+        adults: parseInt(guests) || 1,
+        checkInDate: checkIn || undefined,
+        checkOutDate: checkOut || undefined,
+      });
+
+      let hotels = transformHotelOffers(offersResp.data || []);
+
+      // ── Client-side filters ──
+      if (minPrice || maxPrice) {
+        hotels = hotels.filter(h => {
+          const p = h.pricePerNight || 0;
+          if (minPrice && p < parseInt(minPrice)) return false;
+          if (maxPrice && p > parseInt(maxPrice)) return false;
+          return true;
+        });
+      }
+      if (minRating) hotels = hotels.filter(h => h.rating >= parseFloat(minRating));
+
+      const starList = starsQuery
+        ? (typeof starsQuery === 'string' ? starsQuery.split(',').map(Number) : starsQuery)
+        : (starCategory ? [parseInt(starCategory)] : null);
+
+      if (starList && starList.length > 0) {
+        hotels = hotels.filter(h => starList.includes(Math.round(h.starCategory || 0)));
+      }
+
+      if (amenities) {
+        const amList = amenities.split(',').map(a => a.trim().toLowerCase());
+        hotels = hotels.filter(h =>
+          amList.every(am => h.amenities?.some(a => a.toLowerCase().includes(am)))
+        );
+      }
+
+      if (propertyType) {
+        const ptList = propertyType.split(',').map(p => p.trim().toLowerCase());
+        hotels = hotels.filter(h => ptList.includes(h.propertyType?.toLowerCase()));
+      }
+
+      if (chainName) {
+        const chainList = chainName.split(',').map(c => c.trim().toLowerCase());
+        hotels = hotels.filter(h => chainList.includes(h.chainName?.toLowerCase()));
+      }
+
+      // ── Sorting ──
+      if (sort === 'price') {
+        hotels.sort((a, b) => order === 'asc' ? a.pricePerNight - b.pricePerNight : b.pricePerNight - a.pricePerNight);
+      } else if (sort === 'rating') {
+        hotels.sort((a, b) => order === 'asc' ? a.rating - b.rating : b.rating - a.rating);
+      } else if (sort === 'starCategory') {
+        hotels.sort((a, b) => order === 'asc' ? a.starCategory - b.starCategory : b.starCategory - a.starCategory);
+      }
+
+      // ── Pagination ──
+      const total = hotels.length;
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+      const paged = hotels.slice(skip, skip + parseInt(limit));
+
+      return res.json({
+        success: true,
+        hotels: paged,
+        source: 'amadeus',
+        pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) },
+      });
+    } catch (amadeusErr) {
+      console.error('Amadeus Hotel Search Error:', amadeusErr.description || amadeusErr.message);
+      console.log('Falling back to local MongoDB hotel search...');
+      // Fall through to MongoDB fallback below
+    }
+
+    // ── MongoDB Fallback ──
+    return exports._localSearchHotels(req, res, next);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * MongoDB fallback for hotel search
+ */
+exports._localSearchHotels = async (req, res, next) => {
+  try {
+    const {
+      city, minPrice, maxPrice, minRating, starCategory,
+      stars: starsQuery, amenities, freeCancellation, propertyType, chainName,
+      sort = 'rating', order = 'desc', page = 1, limit = 20,
+    } = req.query;
+
+    const query = { city: new RegExp(city || '', 'i'), isActive: true };
     if (minRating) query.rating = { $gte: parseFloat(minRating) };
     if (starCategory) query.starCategory = parseInt(starCategory);
     if (amenities) {
       const amList = amenities.split(',').map(a => a.trim());
       query.amenities = { $all: amList };
     }
-    if (freeCancellation === 'true' || freeCancellation === true) query.freeCancellation = true;
-    if (propertyType) query.propertyType = new RegExp(propertyType, 'i');
+    if (freeCancellation === 'true') query.freeCancellation = true;
+
+    if (starsQuery) {
+      const starList = starsQuery.split(',').map(Number);
+      query.starCategory = { $in: starList };
+    }
+
+    if (propertyType) {
+      const ptList = propertyType.split(',').map(p => p.trim());
+      query.propertyType = { $in: ptList.map(pt => new RegExp(pt, 'i')) };
+    }
+
+    if (chainName) {
+      const chainList = chainName.split(',').map(c => c.trim());
+      query.chainName = { $in: chainList.map(cn => new RegExp(cn, 'i')) };
+    }
 
     const sortObj = {};
     if (sort === 'rating') sortObj.rating = order === 'asc' ? 1 : -1;
     else if (sort === 'starCategory') sortObj.starCategory = order === 'asc' ? 1 : -1;
     else sortObj.rating = -1;
 
-    // Fetch more when price filter/sort is used so we can filter/sort by room price
     const needPriceFilter = !!(minPrice || maxPrice || sort === 'price');
     const fetchLimit = needPriceFilter ? 500 : parseInt(limit);
     const fetchSkip = needPriceFilter ? 0 : (parseInt(page) - 1) * parseInt(limit);
@@ -74,9 +198,8 @@ exports.searchHotels = async (req, res, next) => {
         return true;
       });
     }
-
     if (sort === 'price') {
-      hotels.sort((a, b) => (order === 'asc' ? (a.pricePerNight - b.pricePerNight) : (b.pricePerNight - a.pricePerNight)));
+      hotels.sort((a, b) => order === 'asc' ? a.pricePerNight - b.pricePerNight : b.pricePerNight - a.pricePerNight);
     }
 
     let total;
@@ -91,6 +214,7 @@ exports.searchHotels = async (req, res, next) => {
     res.json({
       success: true,
       hotels,
+      source: 'mongodb',
       pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) },
     });
   } catch (error) {
@@ -127,7 +251,7 @@ exports.getFeaturedHotels = async (req, res, next) => {
 };
 
 /**
- * @desc    Get popular hotel destinations (cities with count and min price)
+ * @desc    Get popular hotel destinations
  * @route   GET /api/hotels/destinations
  * @access  Public
  */
@@ -224,9 +348,7 @@ exports.getRoomAvailability = async (req, res, next) => {
           bookingType: 'hotel',
           hotel: new mongoose.Types.ObjectId(req.params.hotelId),
           status: { $nin: ['cancelled'] },
-          $or: [
-            { checkIn: { $lt: cOut }, checkOut: { $gt: cIn } },
-          ],
+          $or: [{ checkIn: { $lt: cOut }, checkOut: { $gt: cIn } }],
         },
       },
       { $group: { _id: '$room', count: { $sum: '$rooms' } } },
@@ -239,22 +361,11 @@ exports.getRoomAvailability = async (req, res, next) => {
       const booked = bookedMap[r._id.toString()] || 0;
       const available = Math.max(0, (r.availableRooms || r.totalRooms) - booked);
       const nights = Math.ceil((cOut - cIn) / (1000 * 60 * 60 * 24));
-      const totalPrice = r.pricePerNight * nights * 1; // 1 room
-      return {
-        ...r,
-        available,
-        nights,
-        totalPrice,
-        pricePerNight: r.pricePerNight,
-      };
+      const totalPrice = r.pricePerNight * nights * 1;
+      return { ...r, available, nights, totalPrice, pricePerNight: r.pricePerNight };
     });
 
-    res.json({
-      success: true,
-      checkIn,
-      checkOut,
-      rooms: availableRooms,
-    });
+    res.json({ success: true, checkIn, checkOut, rooms: availableRooms });
   } catch (error) {
     next(error);
   }

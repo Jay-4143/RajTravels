@@ -7,6 +7,9 @@ import {
     FaPrint, FaDownload, FaStar, FaWifi, FaPlug, FaSnowflake
 } from 'react-icons/fa';
 import { MdEventSeat } from 'react-icons/md';
+import PaymentModal from '../components/PaymentModal';
+import { useGlobal } from '../context/GlobalContext';
+import { generateTicket } from '../utils/TicketGenerator';
 
 // ─── Seat Map Component ────────────────────────────────────────────────────
 const SeatMap = ({ seats, selectedSeats, onToggleSeat, deck = 'lower' }) => {
@@ -88,7 +91,7 @@ const SeatMap = ({ seats, selectedSeats, onToggleSeat, deck = 'lower' }) => {
 };
 
 // ─── Booking Confirmation ──────────────────────────────────────────────────
-const BookingConfirmation = ({ booking, bus, onNewBooking }) => (
+const BookingConfirmation = ({ booking, bus, onNewBooking, formatPrice }) => (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
         <div className="max-w-lg w-full">
             {/* Success Header */}
@@ -137,7 +140,7 @@ const BookingConfirmation = ({ booking, bus, onNewBooking }) => (
                 </div>
                 <div className="flex justify-between items-center py-3">
                     <span className="text-gray-500 text-sm">Total Fare</span>
-                    <span className="text-2xl font-extrabold text-blue-600">₹{booking.totalFare}</span>
+                    <span className="text-2xl font-extrabold text-blue-600">{formatPrice(booking.totalFare || 0)}</span>
                 </div>
             </div>
 
@@ -151,14 +154,14 @@ const BookingConfirmation = ({ booking, bus, onNewBooking }) => (
                 <p className="text-xs text-gray-400 text-center mb-4">Confirmation sent to <strong>{booking.passengerEmail}</strong></p>
                 <div className="flex gap-3">
                     <button
-                        onClick={() => window.print()}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+                        onClick={() => generateTicket(booking, 'bus')}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-bold shadow-md"
                     >
-                        <FaPrint /> Print Ticket
+                        <FaDownload /> Download Ticket
                     </button>
                     <button
                         onClick={onNewBooking}
-                        className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-xl hover:bg-blue-700 transition-colors font-bold shadow-md"
+                        className="flex-1 flex items-center justify-center gap-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors font-medium"
                     >
                         Book Another
                     </button>
@@ -180,8 +183,11 @@ const BusBooking = () => {
     const [selectedSeats, setSelectedSeats] = useState([]);
     const [activeDeck, setActiveDeck] = useState('lower');
     const [booking, setBooking] = useState(null);
+    const [createdBooking, setCreatedBooking] = useState(null);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [bookingError, setBookingError] = useState('');
+    const { formatPrice } = useGlobal();
 
     const [contactInfo, setContactInfo] = useState({ name: '', email: '', phone: '' });
     const [passengers, setPassengers] = useState([]);
@@ -231,14 +237,34 @@ const BusBooking = () => {
                 passengers: passengers.map(p => ({ ...p, age: parseInt(p.age) })),
             });
             if (res.success) {
-                setBooking(res.booking);
-                setStep(4);
+                setCreatedBooking(res.booking);
+                setIsPaymentModalOpen(true);
             }
         } catch (err) {
             setBookingError(err?.response?.data?.message || 'Booking failed. Please try again.');
         } finally {
             setSubmitting(false);
         }
+    };
+
+    const onPaymentSuccess = (payment) => {
+        setIsPaymentModalOpen(false);
+        setBooking({
+            ...createdBooking,
+            busName: bus.busName,
+            operatorName: bus.operatorName,
+            from: bus.from,
+            to: bus.to,
+            departureTime: bus.departureTime,
+            arrivalTime: bus.arrivalTime,
+            travelDate: bus.travelDate,
+            passengerName: contactInfo.name,
+            passengerEmail: contactInfo.email,
+            passengerPhone: contactInfo.phone,
+            seats: selectedSeats,
+            passengers: passengers
+        });
+        setStep(4);
     };
 
     const isStep1Valid = selectedSeats.length > 0;
@@ -248,7 +274,7 @@ const BusBooking = () => {
     if (!bus) return null;
 
     if (step === 4 && booking) {
-        return <BookingConfirmation booking={booking} bus={bus} onNewBooking={() => navigate('/buses')} />;
+        return <BookingConfirmation booking={booking} bus={bus} onNewBooking={() => navigate('/buses')} formatPrice={formatPrice} />;
     }
 
     const totalFare = bus.price * selectedSeats.length;
@@ -326,7 +352,7 @@ const BusBooking = () => {
                             {selectedSeats.length > 0 && (
                                 <div className="mt-5 p-3 bg-blue-50 rounded-xl flex items-center justify-between">
                                     <p className="text-blue-700 text-sm font-medium">Selected: <strong>{selectedSeats.join(', ')}</strong></p>
-                                    <p className="text-blue-800 font-bold">₹{totalFare}</p>
+                                    <p className="text-blue-800 font-bold">{formatPrice(totalFare)}</p>
                                 </div>
                             )}
 
@@ -484,7 +510,7 @@ const BusBooking = () => {
                                 disabled={submitting}
                                 className="w-full bg-green-600 text-white font-bold py-3.5 rounded-xl hover:bg-green-700 transition shadow-lg disabled:opacity-70 text-lg"
                             >
-                                {submitting ? 'Processing...' : `✓ Confirm & Pay ₹${totalFare}`}
+                                {submitting ? 'Processing...' : `✓ Confirm & Pay ${formatPrice(totalFare)}`}
                             </button>
                             <p className="text-xs text-center text-gray-400 mt-2 flex items-center justify-center gap-1"><FaShieldAlt /> 100% Secure payment</p>
                         </div>
@@ -533,7 +559,7 @@ const BusBooking = () => {
                             </div>
                             <div className="flex justify-between text-gray-600">
                                 <span>Fare / seat</span>
-                                <span className="font-medium">₹{bus.price}</span>
+                                <span className="font-medium">{formatPrice(bus.price)}</span>
                             </div>
                             <div className="flex items-center gap-1 text-green-600 text-xs">
                                 <FaShieldAlt /> {bus.cancellationPolicy}
@@ -556,7 +582,7 @@ const BusBooking = () => {
                         <div className="mt-4 pt-3 border-t">
                             <div className="flex justify-between items-center">
                                 <span className="font-bold text-gray-700">Total Fare</span>
-                                <span className="text-2xl font-extrabold text-blue-600">₹{totalFare || 0}</span>
+                                <span className="text-2xl font-extrabold text-blue-600">{formatPrice(totalFare || 0)}</span>
                             </div>
                             {selectedSeats.length === 0 && <p className="text-xs text-gray-400 mt-1">Select seats to see total</p>}
                         </div>
@@ -572,6 +598,17 @@ const BusBooking = () => {
                     </div>
                 </div>
             </div>
+
+            {createdBooking && (
+                <PaymentModal
+                    isOpen={isPaymentModalOpen}
+                    onClose={() => setIsPaymentModalOpen(false)}
+                    bookingId={createdBooking.id}
+                    bookingType="bus"
+                    amount={totalFare}
+                    onPaymentSuccess={onPaymentSuccess}
+                />
+            )}
         </div>
     );
 };

@@ -1,20 +1,24 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { createHotelBooking } from "../api/bookings";
+import PaymentModal from "../components/PaymentModal";
+import { useGlobal } from "../context/GlobalContext";
+import { generateTicket } from "../utils/TicketGenerator";
+import toast from "react-hot-toast";
 
 const HotelBooking = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { hotel, room, searchParams } = location.state || {};
 
-  const [step, setStep] = useState(1); // 1: guests, 2: review, 3: mock payment, 4: confirmation
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvv, setCardCvv] = useState("");
+  const [step, setStep] = useState(1); // 1: guests, 2: review, 3: processing/confirmation
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [createdBooking, setCreatedBooking] = useState(null);
   const [guestNames, setGuestNames] = useState([]);
   const [loading, setLoading] = useState(false);
   const [bookingRef, setBookingRef] = useState(null);
   const [error, setError] = useState(null);
+  const { formatPrice } = useGlobal();
 
   useEffect(() => {
     if (!hotel || !room || !searchParams) {
@@ -48,16 +52,13 @@ const HotelBooking = () => {
 
   const handleReview = () => {
     if (guestNames.some((g) => !g.name)) {
-      alert("Please fill all guest names.");
+      toast.error('Please fill all guest names.');
       return;
     }
     setStep(2);
   };
 
-  const handleToPayment = () => setStep(3);
-  const handleBackFromPayment = () => setStep(2);
-
-  const handlePayment = async () => {
+  const handleToPayment = async () => {
     setLoading(true);
     setError(null);
     try {
@@ -70,13 +71,19 @@ const HotelBooking = () => {
         guests: searchParams.guests || 2,
         guestNames: guestNames.map((g) => g.name),
       });
-      setBookingRef(res.data.booking.bookingReference);
-      setStep(4);
+      setCreatedBooking(res.data.booking);
+      setIsPaymentModalOpen(true);
     } catch (err) {
-      setError(err.response?.data?.message || "Booking failed.");
+      setError(err.response?.data?.message || "Booking creation failed.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const onPaymentSuccess = (payment) => {
+    setIsPaymentModalOpen(false);
+    setBookingRef(createdBooking.bookingReference);
+    setStep(4);
   };
 
   if (!hotel || !room || !searchParams) return null;
@@ -84,9 +91,9 @@ const HotelBooking = () => {
   const total = calculateTotal();
   const nights = searchParams.checkIn && searchParams.checkOut
     ? Math.ceil(
-        (new Date(searchParams.checkOut + "T12:00:00") - new Date(searchParams.checkIn + "T12:00:00")) /
-          (1000 * 60 * 60 * 24)
-      )
+      (new Date(searchParams.checkOut + "T12:00:00") - new Date(searchParams.checkIn + "T12:00:00")) /
+      (1000 * 60 * 60 * 24)
+    )
     : 1;
 
   return (
@@ -99,9 +106,8 @@ const HotelBooking = () => {
               {[1, 2, 3, 4].map((s) => (
                 <div
                   key={s}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${
-                    step >= s ? "bg-red-500 text-white" : "bg-gray-200 text-gray-600"
-                  }`}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${step >= s ? "bg-red-500 text-white" : "bg-gray-200 text-gray-600"
+                    }`}
                 >
                   {s}
                 </div>
@@ -114,8 +120,22 @@ const HotelBooking = () => {
               <h2 className="text-xl font-semibold mb-4">Guest Details</h2>
               <div className="space-y-4">
                 {guestNames.map((g, i) => (
-                  <div key={i} className="border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-medium mb-3">Guest {i + 1}</h3>
+                  <div key={i} className="border border-gray-200 rounded-lg p-4 relative group">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="font-medium">Guest {i + 1}</h3>
+                      {guestNames.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = guestNames.filter((_, idx) => idx !== i);
+                            setGuestNames(updated);
+                          }}
+                          className="text-red-500 hover:text-red-700 text-sm font-medium"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <label className="block text-sm text-gray-600 mb-1">Full Name *</label>
@@ -148,6 +168,13 @@ const HotelBooking = () => {
                     </div>
                   </div>
                 ))}
+                <button
+                  type="button"
+                  onClick={() => setGuestNames([...guestNames, { name: "", email: "", phone: "" }])}
+                  className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:text-red-500 hover:border-red-500 transition-colors font-medium flex items-center justify-center gap-2"
+                >
+                  <span className="text-xl">+</span> Add Guest
+                </button>
               </div>
               <div className="mt-6 flex justify-end">
                 <button
@@ -198,17 +225,18 @@ const HotelBooking = () => {
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600">
-                        ₹{room.pricePerNight?.toLocaleString()} × {nights} night{nights !== 1 ? "s" : ""} × {searchParams.rooms || 1} room{searchParams.rooms !== 1 ? "s" : ""}
+                        {formatPrice(room.pricePerNight)} × {nights} night{nights !== 1 ? "s" : ""} × {searchParams.rooms || 1} room{searchParams.rooms !== 1 ? "s" : ""}
                       </span>
-                      <span>₹{total.toLocaleString()}</span>
+                      <span>{formatPrice(total)}</span>
                     </div>
                     <div className="flex justify-between font-semibold text-lg pt-2 border-t">
                       <span>Total</span>
-                      <span>₹{total.toLocaleString()}</span>
+                      <span>{formatPrice(total)}</span>
                     </div>
                   </div>
                 </div>
               </div>
+              {error && <p className="text-red-600 mt-4 text-center">{error}</p>}
               <div className="mt-6 flex justify-between">
                 <button
                   type="button"
@@ -220,71 +248,10 @@ const HotelBooking = () => {
                 <button
                   type="button"
                   onClick={handleToPayment}
-                  className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg"
-                >
-                  Proceed to Payment
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Payment Details (Mock)</h2>
-              <p className="text-sm text-gray-500 mb-4">This is a demo. No real payment will be processed.</p>
-              <div className="space-y-4 max-w-md">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Card Number</label>
-                  <input
-                    type="text"
-                    value={cardNumber}
-                    onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, "").slice(0, 16))}
-                    placeholder="1234 5678 9012 3456"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Expiry (MM/YY)</label>
-                    <input
-                      type="text"
-                      value={cardExpiry}
-                      onChange={(e) => setCardExpiry(e.target.value.slice(0, 5))}
-                      placeholder="12/25"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">CVV</label>
-                    <input
-                      type="text"
-                      value={cardCvv}
-                      onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                      placeholder="123"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                    />
-                  </div>
-                </div>
-                <div className="border-t pt-4">
-                  <p className="text-lg font-semibold">Total: ₹{total.toLocaleString()}</p>
-                </div>
-              </div>
-              {error && <p className="text-red-600 mt-4">{error}</p>}
-              <div className="mt-6 flex justify-between">
-                <button
-                  type="button"
-                  onClick={handleBackFromPayment}
-                  className="px-6 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50"
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  onClick={handlePayment}
                   disabled={loading}
                   className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg disabled:opacity-50"
                 >
-                  {loading ? "Processing..." : "Pay ₹" + total.toLocaleString()}
+                  {loading ? "Processing..." : "Proceed to Payment"}
                 </button>
               </div>
             </div>
@@ -305,23 +272,45 @@ const HotelBooking = () => {
               <div className="flex gap-4 justify-center">
                 <button
                   type="button"
+                  onClick={() => generateTicket({
+                    ...createdBooking,
+                    hotel: hotel,
+                    room: room,
+                    checkIn: searchParams.checkIn,
+                    checkOut: searchParams.checkOut,
+                    guests: searchParams.guests || searchParams.adults + (searchParams.children || 0),
+                    guestNames: guestNames.map(g => g.name)
+                  }, 'hotel')}
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg flex items-center gap-2 shadow-lg shadow-blue-200"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download Ticket
+                </button>
+                <button
+                  type="button"
                   onClick={() => navigate("/hotels")}
                   className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg"
                 >
                   Book Another Hotel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate("/bookings")}
-                  className="px-6 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50"
-                >
-                  View My Bookings
                 </button>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {createdBooking && (
+        <PaymentModal
+          isOpen={isPaymentModalOpen}
+          onClose={() => setIsPaymentModalOpen(false)}
+          bookingId={createdBooking.id}
+          bookingType="hotel"
+          amount={total}
+          onPaymentSuccess={onPaymentSuccess}
+        />
+      )}
     </div>
   );
 };

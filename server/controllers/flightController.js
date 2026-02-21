@@ -1,12 +1,16 @@
 /**
  * Flight Controller
  * Search, filter, sort, details, booking
+ * Now powered by Amadeus API for live flight data
  */
 
+const mongoose = require('mongoose');
 const Flight = require('../models/flight');
+const amadeusService = require('../services/amadeusService');
+const { transformFlightOffers } = require('../utils/amadeusTransformers');
 
 /**
- * @desc    Search flights (one-way & round-trip)
+ * @desc    Search flights via Amadeus API
  * @route   GET /api/flights/search
  * @access  Public
  */
@@ -17,6 +21,7 @@ exports.searchFlights = async (req, res, next) => {
       to,
       departureDate,
       returnDate,
+      segments: segmentsJson,
       passengers = 1,
       class: flightClass,
       sort = 'price',
@@ -26,13 +31,43 @@ exports.searchFlights = async (req, res, next) => {
       maxPrice,
       maxStops,
       refundable,
-      departureTimeFrom,
-      departureTimeTo,
-      arrivalTimeFrom,
-      arrivalTimeTo,
       page = 1,
       limit = 20,
     } = req.query;
+
+    // Map travelClass from frontend format to Amadeus format
+    const classMap = {
+      economy: 'ECONOMY',
+      premium_economy: 'PREMIUM_ECONOMY',
+      business: 'BUSINESS',
+      first: 'FIRST',
+    };
+
+    // ── Handle Multi-City ──
+    if (segmentsJson) {
+      try {
+        const segments = JSON.parse(segmentsJson);
+        const amResponse = await amadeusService.searchMultiCityFlightOffers({
+          segments,
+          adults: parseInt(passengers) || 1,
+          travelClass: classMap[flightClass]
+        });
+        const flights = transformFlightOffers(amResponse.data, amResponse.result?.dictionaries || {});
+        return res.json({
+          success: true,
+          flights,
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: flights.length,
+            pages: 1
+          }
+        });
+      } catch (err) {
+        console.error('Multi-city Search Error:', err.message);
+        throw err; // Let catch block handle it
+      }
+    }
 
     if (!from || !to || !departureDate) {
       return res.status(400).json({
@@ -41,20 +76,109 @@ exports.searchFlights = async (req, res, next) => {
       });
     }
 
+    const amadeusParams = {
+      origin: from.toUpperCase(),
+      destination: to.toUpperCase(),
+      departureDate,
+      adults: parseInt(passengers) || 1,
+      max: 50,
+    };
+    if (returnDate) amadeusParams.returnDate = returnDate;
+    if (flightClass && classMap[flightClass]) amadeusParams.travelClass = classMap[flightClass];
+    if (maxStops !== undefined) amadeusParams.maxStops = parseInt(maxStops);
+
+    const response = await amadeusService.searchFlightOffers(amadeusParams);
+    let flights = transformFlightOffers(response.data, response.result?.dictionaries || {});
+
+    // ── Client-side filters (post-Amadeus) ──
+    if (airline) {
+      const re = new RegExp(airline, 'i');
+      flights = flights.filter(f => re.test(f.airline) || re.test(f.airlineCode));
+    }
+    if (minPrice) flights = flights.filter(f => f.price >= parseInt(minPrice));
+    if (maxPrice) flights = flights.filter(f => f.price <= parseInt(maxPrice));
+    if (refundable === 'true') flights = flights.filter(f => f.refundable);
+
+    // ── Sorting ──
+    if (sort === 'price') {
+      flights.sort((a, b) => order === 'desc' ? b.price - a.price : a.price - b.price);
+    } else if (sort === 'duration') {
+      flights.sort((a, b) => {
+        const dA = parseInt(a.duration?.match(/\d+/)?.[0] || 0) * 60 + parseInt(a.duration?.match(/(\d+)m/)?.[1] || 0);
+        const dB = parseInt(b.duration?.match(/\d+/)?.[0] || 0) * 60 + parseInt(b.duration?.match(/(\d+)m/)?.[1] || 0);
+        return dA - dB;
+      });
+    } else if (sort === 'departure') {
+      flights.sort((a, b) => {
+        const tA = new Date(a.departureTime).getTime();
+        const tB = new Date(b.departureTime).getTime();
+        return order === 'desc' ? tB - tA : tA - tB;
+      });
+    }
+
+    // ── Pagination ──
+    const total = flights.length;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const paged = flights.slice(skip, skip + parseInt(limit));
+
+    // Separate return flights for round-trip display
+    const outboundFlights = paged.map(f => {
+      const { returnFlight, ...outbound } = f;
+      return outbound;
+    });
+
+    const returnFlights = returnDate
+      ? paged.filter(f => f.returnFlight).map(f => f.returnFlight)
+      : [];
+
+    res.json({
+      success: true,
+      flights: outboundFlights,
+      returnFlights,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit)),
+      },
+    });
+  } catch (error) {
+    console.error('Amadeus Flight Search Error:', error.description || error.message);
+
+    // Fallback to MongoDB if Amadeus fails
+    try {
+      console.log('Falling back to local MongoDB flight search...');
+      return exports._localSearchFlights(req, res, next);
+    } catch (fallbackErr) {
+      next(fallbackErr);
+    }
+  }
+};
+
+/**
+ * @desc    Fallback: Search flights from local MongoDB
+ */
+exports._localSearchFlights = async (req, res, next) => {
+  try {
+    const {
+      from, to, departureDate, returnDate,
+      passengers = 1, class: flightClass,
+      sort = 'price', order = 'asc',
+      airline, minPrice, maxPrice, maxStops,
+      page = 1, limit = 20,
+    } = req.query;
+
     const query = {
       from: new RegExp(from, 'i'),
       to: new RegExp(to, 'i'),
       isActive: true,
       seatsAvailable: { $gte: parseInt(passengers) || 1 },
     };
-
-    // Departure date - match date part
     const depDate = new Date(departureDate);
     depDate.setHours(0, 0, 0, 0);
     const depDateEnd = new Date(depDate);
     depDateEnd.setDate(depDateEnd.getDate() + 1);
     query.departureDate = { $gte: depDate, $lt: depDateEnd };
-
     if (airline) query.airline = new RegExp(airline, 'i');
     if (minPrice || maxPrice) {
       query.price = {};
@@ -63,41 +187,6 @@ exports.searchFlights = async (req, res, next) => {
     }
     if (maxStops !== undefined) query.stops = { $lte: parseInt(maxStops) };
     if (flightClass) query.class = flightClass;
-    if (refundable === 'true' || refundable === true) query.refundable = true;
-
-    // Time-of-day filters: departureTime/arrivalTime are full Date; use same day as departureDate
-    if (departureTimeFrom || departureTimeTo) {
-      const d = new Date(departureDate);
-      d.setHours(0, 0, 0, 0);
-      if (departureTimeFrom) {
-        const fromTime = new Date(d);
-        const [h, m] = departureTimeFrom.split(':').map(Number);
-        fromTime.setHours(h || 0, m || 0, 0, 0);
-        query.departureTime = { ...query.departureTime, $gte: fromTime };
-      }
-      if (departureTimeTo) {
-        const toTime = new Date(d);
-        const [h, m] = departureTimeTo.split(':').map(Number);
-        toTime.setHours(h || 23, m || 59, 59, 999);
-        query.departureTime = { ...query.departureTime, $lte: toTime };
-      }
-    }
-    if (arrivalTimeFrom || arrivalTimeTo) {
-      const d = new Date(departureDate);
-      d.setHours(0, 0, 0, 0);
-      if (arrivalTimeFrom) {
-        const fromTime = new Date(d);
-        const [h, m] = arrivalTimeFrom.split(':').map(Number);
-        fromTime.setHours(h || 0, m || 0, 0, 0);
-        query.arrivalTime = { ...query.arrivalTime, $gte: fromTime };
-      }
-      if (arrivalTimeTo) {
-        const toTime = new Date(d);
-        const [h, m] = arrivalTimeTo.split(':').map(Number);
-        toTime.setHours(h || 23, m || 59, 59, 999);
-        query.arrivalTime = { ...query.arrivalTime, $lte: toTime };
-      }
-    }
 
     const sortObj = {};
     if (sort === 'price') sortObj.price = order === 'desc' ? -1 : 1;
@@ -109,31 +198,15 @@ exports.searchFlights = async (req, res, next) => {
     const flights = await Flight.find(query).sort(sortObj).skip(skip).limit(parseInt(limit)).lean();
     const total = await Flight.countDocuments(query);
 
-    const response = {
-      success: true,
-      flights,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / parseInt(limit)),
-      },
-    };
+    const response = { success: true, flights, pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) } };
 
     if (returnDate) {
-      const returnQuery = {
-        from: new RegExp(to, 'i'),
-        to: new RegExp(from, 'i'),
-        isActive: true,
-        seatsAvailable: { $gte: parseInt(passengers) || 1 },
-      };
+      const returnQuery = { from: new RegExp(to, 'i'), to: new RegExp(from, 'i'), isActive: true, seatsAvailable: { $gte: parseInt(passengers) || 1 } };
       const retDate = new Date(returnDate);
       retDate.setHours(0, 0, 0, 0);
       const retDateEnd = new Date(retDate);
       retDateEnd.setDate(retDateEnd.getDate() + 1);
       returnQuery.departureDate = { $gte: retDate, $lt: retDateEnd };
-      if (airline) returnQuery.airline = new RegExp(airline, 'i');
-
       const returnFlights = await Flight.find(returnQuery).sort(sortObj).skip(skip).limit(parseInt(limit)).lean();
       response.returnFlights = returnFlights;
     }
@@ -189,22 +262,34 @@ exports.getFlightById = async (req, res, next) => {
  */
 exports.getAvailableSeats = async (req, res, next) => {
   try {
-    const flight = await Flight.findById(req.params.id);
-    if (!flight) {
-      return res.status(404).json({ success: false, message: 'Flight not found' });
+    const flightId = req.params.id;
+    let seatsAvailable = 150; // Default fallback for external flights
+
+    if (mongoose.Types.ObjectId.isValid(flightId)) {
+      const flight = await Flight.findById(flightId);
+      if (flight) {
+        seatsAvailable = flight.seatsAvailable;
+      }
     }
-    // Generate seat layout - A,B,C, aisle, D,E,F for typical aircraft
-    const rows = Math.ceil(flight.seatsAvailable / 6);
-    const bookedSeats = []; // Would come from bookings - placeholder
+
+    const rows = Math.ceil(seatsAvailable / 6);
     const availableSeats = [];
     const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+    // Generate simple seat map based on available count
     for (let r = 1; r <= rows; r++) {
       for (const l of letters) {
         const seat = `${r}${l}`;
-        if (!bookedSeats.includes(seat)) availableSeats.push(seat);
+        // In a real app, we'd check against a 'BookedSeats' collection
+        availableSeats.push(seat);
       }
     }
-    res.json({ success: true, availableSeats, totalAvailable: flight.seatsAvailable });
+
+    res.json({
+      success: true,
+      availableSeats: availableSeats.slice(0, seatsAvailable),
+      totalAvailable: seatsAvailable
+    });
   } catch (error) {
     next(error);
   }
@@ -221,11 +306,11 @@ exports.calculatePrice = async (req, res, next) => {
     if (!flight) {
       return res.status(404).json({ success: false, message: 'Flight not found' });
     }
-    const { passengers = 1, seats = [] } = req.body;
+    const { passengers = 1 } = req.body;
     const baseFare = flight.price * parseInt(passengers);
-    const taxPercent = 0.18; // 18% GST
+    const taxPercent = 0.18;
     const taxAmount = Math.round(baseFare * taxPercent);
-    const convenienceFee = 199 * parseInt(passengers); // Per passenger
+    const convenienceFee = 199 * parseInt(passengers);
     const total = baseFare + taxAmount + convenienceFee;
 
     res.json({
@@ -233,7 +318,7 @@ exports.calculatePrice = async (req, res, next) => {
       breakdown: {
         baseFare,
         taxAmount,
-        convenienceFee: convenienceFee,
+        convenienceFee,
         total,
         perPassenger: Math.round(total / passengers),
       },
