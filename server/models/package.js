@@ -57,6 +57,8 @@ const packageSchema = new mongoose.Schema({
   hotDeal: { type: Boolean, default: false },
   validFrom: Date,
   validTo: Date,
+  region: { type: String },       // e.g. 'Asia', 'Europe', 'North India'
+  bestMonths: [{ type: String }], // e.g. 'JAN', 'FEB'
   maxPeople: {
     type: Number,
     default: 10,

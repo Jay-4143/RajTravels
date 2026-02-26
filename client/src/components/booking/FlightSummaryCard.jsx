@@ -22,6 +22,18 @@ const FlightSummaryCard = ({ flight, searchParams }) => {
         ? { cabin: flight.baggage.cabin || "7kg", checkIn: flight.baggage.checkIn || "15kg" }
         : { cabin: "7kg", checkIn: "15kg" };
 
+    const checkInBaggageStr = [
+        (searchParams?.adults > 0 || !searchParams?.adults) ? `Adult - 15Kg` : null,
+        searchParams?.children > 0 ? `Child - 15Kg` : null,
+        searchParams?.infants > 0 ? `Infant - 0Kg` : null,
+    ].filter(Boolean).join(" ");
+
+    const cabinBaggageStr = [
+        (searchParams?.adults > 0 || !searchParams?.adults) ? `Adult - 7Kg` : null,
+        searchParams?.children > 0 ? `Child - 7Kg` : null,
+        searchParams?.infants > 0 ? `Infant - 7Kg` : null,
+    ].filter(Boolean).join(" ");
+
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
             <div className="p-6">
@@ -43,64 +55,218 @@ const FlightSummaryCard = ({ flight, searchParams }) => {
                     <span>• {formatDate(flight.departureDate || searchParams?.departureDate)}</span>
                     <span>• Duration {flight.duration || "02h 20m"}</span>
                     <span>• {flight.stops === 0 ? "Non Stop" : `${flight.stops} stop(s)`}</span>
+                    {flight.stops > 0 && flight.viaCities?.length > 0 && (
+                        <span className="text-blue-600 font-bold">• VIA {flight.viaCities.join(', ').toUpperCase()}</span>
+                    )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-slate-50/50 rounded-xl p-4 border border-slate-100 mb-8">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-red-500 font-bold border border-slate-200">
-                            {flight.airlineCode || "AI"}
-                        </div>
-                        <div>
-                            <p className="text-sm font-bold text-gray-900 leading-tight">{flight.airline}</p>
-                            <p className="text-[10px] text-gray-400 font-bold">{flight.flightNumber || "SG-106"}</p>
-                        </div>
+                <div className="space-y-8">
+                    {/* Onward Journey Header */}
+                    <div className="flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pb-2 border-b border-slate-100">
+                        <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                            Onward Journey: {flight.from} → {flight.to}
+                        </span>
+                        <span>{formatDate(flight.departureDate || searchParams?.departureDate)}</span>
                     </div>
-                    <div className="text-center md:border-l border-slate-200">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Aircraft</p>
-                        <p className="text-xs font-bold text-gray-700">BOEING</p>
-                    </div>
-                    <div className="text-center md:border-l border-slate-200">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Travel Class</p>
-                        <p className="text-xs font-bold text-gray-700 uppercase">{searchParams?.travelClass || "Economy"}</p>
-                    </div>
-                    <div className="flex gap-4 md:border-l border-slate-200 px-4">
-                        <div className="text-center">
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Check-In</p>
-                            <p className="text-xs font-bold text-gray-700">{baggage.checkIn}</p>
+
+                    {(flight.segments && flight.segments.length > 0 ? flight.segments : [flight]).map((seg, idx) => (
+                        <div key={`out-${idx}`} className="space-y-6">
+                            <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+                                <div className="p-5">
+                                    {/* Segment Header: Airline & Aircraft Info */}
+                                    <div className="flex flex-wrap items-center gap-6 mb-8">
+                                        {/* Airline Info - Matching Image 2 */}
+                                        <div className="flex items-center gap-4 pr-6 border-r border-slate-100">
+                                            <div className="w-8 h-8 bg-red-600 rounded-md flex items-center justify-center text-white font-bold text-[10px] uppercase overflow-hidden shadow-sm">
+                                                {seg.airlineCode || '✈'}
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-[15px] font-bold text-slate-800 tracking-tight">{seg.airline}</span>
+                                                <span className="text-slate-300 text-lg font-light">|</span>
+                                                <span className="text-[12px] font-medium text-slate-400">{seg.flightNumber}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Premium Baggage & Aircraft Bar (Single Row) - Precisely matching Image 2 */}
+                                        <div className="flex items-center bg-[#F8FAFC] rounded-lg border border-slate-100 px-1 py-1.5 gap-0 divide-x-2 divide-blue-400">
+                                            <div className="px-6 py-0.5">
+                                                <p className="text-[11px] font-bold text-slate-800 leading-tight">Aircraft</p>
+                                                <p className="text-[10px] text-slate-500 font-medium uppercase mt-0.5">{seg.aircraft || 'BOEING'}</p>
+                                            </div>
+                                            <div className="px-6 py-0.5">
+                                                <p className="text-[11px] font-bold text-slate-800 leading-tight">Travel Class</p>
+                                                <p className="text-[10px] text-slate-500 font-medium uppercase mt-0.5">{searchParams?.travelClass || 'Economy'}</p>
+                                            </div>
+                                            <div className="px-6 py-0.5">
+                                                <p className="text-[11px] font-bold text-slate-800 leading-tight">Check-In Baggage</p>
+                                                <p className="text-[10px] text-slate-500 font-medium mt-0.5">{checkInBaggageStr}</p>
+                                            </div>
+                                            <div className="px-6 py-0.5">
+                                                <p className="text-[11px] font-bold text-slate-800 leading-tight">Cabin Baggage</p>
+                                                <p className="text-[10px] text-slate-500 font-medium mt-0.5">{cabinBaggageStr}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Segment Timeline */}
+                                    <div className="flex flex-col md:flex-row items-center justify-between gap-8 px-2">
+                                        <div className="flex-1 w-full md:w-auto">
+                                            <p className="text-3xl font-black text-gray-900 tracking-tighter">{formatTime(seg.departureTime)}</p>
+                                            <p className="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wider">{formatDate(seg.departureTime)}</p>
+                                            <div className="mt-3">
+                                                <p className="text-sm font-black text-gray-800 uppercase tracking-tight">{seg.fromCity || seg.from} [{seg.from}]</p>
+                                                <p className="text-[10px] text-gray-400 font-bold mt-0.5 leading-tight">{seg.fromAirport}</p>
+                                                <p className="text-[10px] text-slate-400 font-black mt-0.5 uppercase tracking-widest">Terminal {seg.terminal || '1'}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex-1 flex flex-col items-center min-w-[140px]">
+                                            <span className="text-[10px] font-black text-slate-400 mb-3 uppercase tracking-[0.2em]">{seg.duration}</span>
+                                            <div className="w-full relative flex items-center justify-center">
+                                                <div className="absolute inset-0 flex items-center">
+                                                    <div className="w-full border-t-2 border-dashed border-slate-200"></div>
+                                                </div>
+                                                <div className="relative z-10 bg-white px-2">
+                                                    <FaPlane className="text-blue-500 w-5 h-5" />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex-1 w-full md:w-auto md:text-right">
+                                            <p className="text-3xl font-black text-gray-900 tracking-tighter">{formatTime(seg.arrivalTime)}</p>
+                                            <p className="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wider">{formatDate(seg.arrivalTime)}</p>
+                                            <div className="mt-3">
+                                                <p className="text-sm font-black text-gray-800 uppercase tracking-tight">{seg.toCity || seg.to} [{seg.to}]</p>
+                                                <p className="text-[10px] text-gray-400 font-bold mt-0.5 leading-tight">{seg.toAirport}</p>
+                                                <p className="text-[10px] text-slate-400 font-black mt-0.5 uppercase tracking-widest">Terminal {seg.arrivalTerminal || '1D'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Layover Indicator */}
+                            {seg.layoverDuration && (
+                                <div className="bg-gradient-to-r from-blue-50/50 via-blue-50 to-blue-50/50 border-y border-blue-100 py-3 px-8 flex items-center gap-4 relative">
+                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-blue-400 rounded-r-full"></div>
+                                    <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shadow-sm border border-blue-200">
+                                        <FaPlane className="w-3.5 h-3.5" />
+                                    </div>
+                                    <p className="text-[11px] font-black text-blue-800 uppercase tracking-widest leading-relaxed">
+                                        Change planes at <span className="text-blue-600 underline decoration-2 underline-offset-4">{seg.toCity} | {seg.toAirport} | {seg.to}</span>, Connecting Time: <span className="text-red-500">{seg.layoverDuration}</span>
+                                    </p>
+                                </div>
+                            )}
                         </div>
-                        <div className="text-center">
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Cabin</p>
-                            <p className="text-xs font-bold text-gray-700">{baggage.cabin}</p>
-                        </div>
-                    </div>
+                    ))}
+
+                    {/* Return Journey Integration */}
+                    {flight.returnFlight && (
+                        <>
+                            {/* Return Journey Header */}
+                            <div className="flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pb-2 border-b border-slate-100 pt-8 mt-4 border-t">
+                                <span className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                                    Return Journey: {flight.returnFlight.from} → {flight.returnFlight.to}
+                                </span>
+                                <span>{formatDate(flight.returnFlight.departureTime)}</span>
+                            </div>
+
+                            {(flight.returnFlight.segments && flight.returnFlight.segments.length > 0 ? flight.returnFlight.segments : [flight.returnFlight]).map((seg, idx) => (
+                                <div key={`ret-${idx}`} className="space-y-6">
+                                    <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+                                        <div className="p-5">
+                                            <div className="flex flex-wrap items-center gap-6 mb-8">
+                                                {/* Airline Info - Matching Image 2 */}
+                                                <div className="flex items-center gap-4 pr-6 border-r border-slate-100">
+                                                    <div className="w-8 h-8 bg-red-600 rounded-md flex items-center justify-center text-white font-bold text-[10px] uppercase overflow-hidden shadow-sm">
+                                                        {seg.airlineCode || '✈'}
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-[15px] font-bold text-slate-800 tracking-tight">{seg.airline}</span>
+                                                        <span className="text-slate-300 text-lg font-light">|</span>
+                                                        <span className="text-[12px] font-medium text-slate-400">{seg.flightNumber}</span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Premium Baggage & Aircraft Bar (Single Row) - Precisely matching Image 2 */}
+                                                <div className="flex items-center bg-[#F8FAFC] rounded-lg border border-slate-100 px-1 py-1.5 gap-0 divide-x-2 divide-blue-400">
+                                                    <div className="px-6 py-0.5">
+                                                        <p className="text-[11px] font-bold text-slate-800 leading-tight">Aircraft</p>
+                                                        <p className="text-[10px] text-slate-500 font-medium uppercase mt-0.5">{seg.aircraft || 'BOEING'}</p>
+                                                    </div>
+                                                    <div className="px-6 py-0.5">
+                                                        <p className="text-[11px] font-bold text-slate-800 leading-tight">Travel Class</p>
+                                                        <p className="text-[10px] text-slate-500 font-medium uppercase mt-0.5">{searchParams?.travelClass || 'Economy'}</p>
+                                                    </div>
+                                                    <div className="px-6 py-0.5">
+                                                        <p className="text-[11px] font-bold text-slate-800 leading-tight">Check-In Baggage</p>
+                                                        <p className="text-[10px] text-slate-500 font-medium mt-0.5">{checkInBaggageStr}</p>
+                                                    </div>
+                                                    <div className="px-6 py-0.5">
+                                                        <p className="text-[11px] font-bold text-slate-800 leading-tight">Cabin Baggage</p>
+                                                        <p className="text-[10px] text-slate-500 font-medium mt-0.5">{cabinBaggageStr}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Segment Timeline */}
+                                            <div className="flex flex-col md:flex-row items-center justify-between gap-8 px-2">
+                                                <div className="flex-1 w-full md:w-auto">
+                                                    <p className="text-3xl font-black text-gray-900 tracking-tighter">{formatTime(seg.departureTime)}</p>
+                                                    <p className="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wider">{formatDate(seg.departureTime)}</p>
+                                                    <div className="mt-3">
+                                                        <p className="text-sm font-black text-gray-800 uppercase tracking-tight">{seg.fromCity || seg.from} [{seg.from}]</p>
+                                                        <p className="text-[10px] text-gray-400 font-bold mt-0.5 leading-tight">{seg.fromAirport}</p>
+                                                        <p className="text-[10px] text-slate-400 font-black mt-0.5 uppercase tracking-widest">Terminal {seg.terminal || '1'}</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex-1 flex flex-col items-center min-w-[140px]">
+                                                    <span className="text-[10px] font-black text-slate-400 mb-3 uppercase tracking-[0.2em]">{seg.duration}</span>
+                                                    <div className="w-full relative flex items-center justify-center">
+                                                        <div className="absolute inset-0 flex items-center">
+                                                            <div className="w-full border-t-2 border-dashed border-slate-200"></div>
+                                                        </div>
+                                                        <div className="relative z-10 bg-white px-2">
+                                                            <FaPlane className="text-blue-500 w-5 h-5" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex-1 w-full md:w-auto md:text-right">
+                                                    <p className="text-3xl font-black text-gray-900 tracking-tighter">{formatTime(seg.arrivalTime)}</p>
+                                                    <p className="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wider">{formatDate(seg.arrivalTime)}</p>
+                                                    <div className="mt-3">
+                                                        <p className="text-sm font-black text-gray-800 uppercase tracking-tight">{seg.toCity || seg.to} [{seg.to}]</p>
+                                                        <p className="text-[10px] text-gray-400 font-bold mt-0.5 leading-tight">{seg.toAirport}</p>
+                                                        <p className="text-[10px] text-slate-400 font-black mt-0.5 uppercase tracking-widest">Terminal {seg.arrivalTerminal || '1D'}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Layover Indicator */}
+                                    {seg.layoverDuration && (
+                                        <div className="bg-gradient-to-r from-blue-50/50 via-blue-50 to-blue-50/50 border-y border-blue-100 py-3 px-8 flex items-center gap-4 relative">
+                                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-blue-400 rounded-r-full"></div>
+                                            <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shadow-sm border border-blue-200">
+                                                <FaPlane className="w-3.5 h-3.5" />
+                                            </div>
+                                            <p className="text-[11px] font-black text-blue-800 uppercase tracking-widest leading-relaxed">
+                                                Change planes at <span className="text-blue-600 underline decoration-2 underline-offset-4">{seg.toCity} | {seg.toAirport} | {seg.to}</span>, Connecting Time: <span className="text-red-500">{seg.layoverDuration}</span>
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </>
+                    )}
                 </div>
 
-                <div className="flex items-center justify-between relative px-4">
-                    <div className="text-left z-10">
-                        <p className="text-2xl font-black text-gray-900 tracking-tighter">{formatTime(flight.departureTime)}</p>
-                        <p className="text-[10px] font-bold text-gray-500 mt-1 uppercase tracking-widest">{formatDate(flight.departureDate || searchParams?.departureDate)}</p>
-                        <p className="text-xs font-bold text-gray-700 mt-1">{flight.fromCity || flight.from} [{flight.from}]</p>
-                        <p className="text-[10px] text-gray-400 font-medium">Coming Soon International Airport Terminal 1</p>
-                    </div>
-
-                    <div className="flex-1 flex flex-col items-center px-12 relative">
-                        <span className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-widest">{flight.duration}</span>
-                        <div className="w-full flex items-center gap-2">
-                            <div className="h-px bg-slate-200 border-b border-dashed border-slate-300 flex-1" />
-                            <FaPlane className="text-blue-400 w-4 h-4 transform rotate-45 -translate-y-[2px]" />
-                            <div className="h-px bg-slate-200 border-b border-dashed border-slate-300 flex-1" />
-                        </div>
-                    </div>
-
-                    <div className="text-right z-10">
-                        <p className="text-2xl font-black text-gray-900 tracking-tighter">{formatTime(flight.arrivalTime)}</p>
-                        <p className="text-[10px] font-bold text-gray-500 mt-1 uppercase tracking-widest">{formatDate(flight.arrivalTime || searchParams?.departureDate)}</p>
-                        <p className="text-xs font-bold text-gray-700 mt-1">{flight.toCity || flight.to} [{flight.to}]</p>
-                        <p className="text-[10px] text-gray-400 font-medium">Coming Soon International Airport Terminal 1D</p>
-                    </div>
-                </div>
-
-                <div className="mt-8 pt-4 border-t border-slate-50 flex items-center gap-2">
+                <div className="mt-12 pt-4 border-t border-slate-50 flex items-center gap-2">
                     <div className="p-1 px-3 bg-blue-50 rounded-lg flex items-center gap-2 border border-blue-100">
                         <span className="w-4 h-4 rounded-full border border-blue-400 inline-flex items-center justify-center text-[10px] text-blue-500 animate-pulse">i</span>
                         <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Meal, Seat are chargeable.</span>

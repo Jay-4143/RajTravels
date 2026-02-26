@@ -22,6 +22,44 @@ const AIRLINE_NAMES = {
     'G8': 'Go First', 'I5': 'AirAsia India', 'QP': 'Akasa Air',
 };
 
+/* ──────────── IATA to City Name Mapping ──────────── */
+const IATA_TO_CITY = {
+    'BOM': 'Mumbai', 'DEL': 'Delhi', 'BLR': 'Bangalore', 'MAA': 'Chennai',
+    'CCU': 'Kolkata', 'HYD': 'Hyderabad', 'PNQ': 'Pune', 'AMD': 'Ahmedabad',
+    'GOI': 'Goa', 'JAI': 'Jaipur', 'COK': 'Kochi', 'LKO': 'Lucknow',
+    'DXB': 'Dubai', 'SIN': 'Singapore', 'LHR': 'London', 'JFK': 'New York',
+    'BKK': 'Bangkok', 'CDG': 'Paris', 'SYD': 'Sydney', 'MEL': 'Melbourne',
+    'FRA': 'Frankfurt', 'HKG': 'Hong Kong', 'NRT': 'Tokyo', 'ICN': 'Seoul',
+    'DOH': 'Doha', 'AUH': 'Abu Dhabi', 'KUL': 'Kuala Lumpur', 'BNE': 'Brisbane',
+    'SFO': 'San Francisco', 'LAX': 'Los Angeles', 'ORD': 'Chicago',
+    'YYZ': 'Toronto', 'YVR': 'Vancouver', 'AMS': 'Amsterdam', 'MAD': 'Madrid',
+    'BCN': 'Barcelona', 'FCO': 'Rome', 'MUC': 'Munich', 'ZRH': 'Zurich',
+};
+
+/* ──────────── IATA to Airport Name Mapping ──────────── */
+const IATA_TO_AIRPORT = {
+    'BOM': 'Chhatrapati Shivaji International Airport',
+    'DEL': 'Indira Gandhi International Airport',
+    'BLR': 'Kempegowda International Airport',
+    'MAA': 'Chennai International Airport',
+    'CCU': 'Netaji Subhash Chandra Bose International Airport',
+    'HYD': 'Rajiv Gandhi International Airport',
+    'PNQ': 'Pune Airport',
+    'AMD': 'Sardar Vallabhbhai Patel International Airport',
+    'GOI': 'Dabolim Airport',
+    'JAI': 'Jaipur International Airport',
+    'COK': 'Cochin International Airport',
+    'LKO': 'Chaudhary Charan Singh International Airport',
+};
+
+function getCityName(iata) {
+    return IATA_TO_CITY[iata] || iata;
+}
+
+function getAirportName(iata) {
+    return IATA_TO_AIRPORT[iata] || `${iata} International Airport`;
+}
+
 /**
  * Parse ISO 8601 duration (PT2H30M) → "2h 30m"
  */
@@ -56,14 +94,58 @@ function mapClass(cls) {
 exports.transformFlightOffer = (offer, dictionaries = {}) => {
     const carriers = dictionaries.carriers || {};
 
+    // Helper to transform an itinerary into segments
+    const transformItinerary = (itinerary) => {
+        if (!itinerary?.segments) return [];
+        return itinerary.segments.map((seg, idx) => {
+            const nextSeg = itinerary.segments[idx + 1];
+            let layoverDuration = null;
+            if (nextSeg) {
+                const arrival = new Date(seg.arrival.at);
+                const nextDeparture = new Date(nextSeg.departure.at);
+                const diffMs = nextDeparture - arrival;
+                const hours = Math.floor(diffMs / 3600000);
+                const minutes = Math.floor((diffMs % 3600000) / 60000);
+                layoverDuration = `${hours}h ${minutes}m`;
+            }
+
+            const carrierCode = seg.carrierCode || '';
+            return {
+                flightNumber: `${carrierCode}${seg.number || ''}`,
+                airline: carriers[carrierCode] || AIRLINE_NAMES[carrierCode] || carrierCode,
+                airlineCode: carrierCode,
+                from: seg.departure.iataCode,
+                to: seg.arrival.iataCode,
+                fromCity: getCityName(seg.departure.iataCode),
+                toCity: getCityName(seg.arrival.iataCode),
+                fromAirport: getAirportName(seg.departure.iataCode),
+                toAirport: getAirportName(seg.arrival.iataCode),
+                departureTime: seg.departure.at,
+                arrivalTime: seg.arrival.at,
+                duration: parseDuration(seg.duration),
+                terminal: seg.departure.terminal || '1',
+                arrivalTerminal: seg.arrival.terminal || '1D',
+                aircraft: dictionaries.aircraft?.[seg.aircraft?.code] || 'Airbus Jet',
+                layoverDuration
+            };
+        });
+    };
+
     // Take the first itinerary for outbound
     const outbound = offer.itineraries?.[0];
-    const firstSeg = outbound?.segments?.[0];
-    const lastSeg = outbound?.segments?.[outbound.segments.length - 1];
-    const stops = (outbound?.segments?.length || 1) - 1;
-    const stopCities = stops > 0
-        ? outbound.segments.slice(0, -1).map(s => s.arrival?.iataCode).filter(Boolean)
+    const segments = outbound?.segments || [];
+    const firstSeg = segments[0];
+    const lastSeg = segments[segments.length - 1];
+    const stops = Math.max(0, segments.length - 1);
+    const stopCodes = stops > 0
+        ? segments.slice(0, -1).map(s => s.arrival?.iataCode).filter(Boolean)
         : [];
+    const viaCities = stopCodes.map(code => getCityName(code));
+
+    // Diagnostic logging
+    if (stops > 0) {
+        console.log(`[TRANSFORMER] Identified VIA flight: ${firstSeg?.departure?.iataCode} -> ${lastSeg?.arrival?.iataCode}, segments=${segments.length}, stops=${stops}`);
+    }
 
     const carrierCode = firstSeg?.carrierCode || '';
     const airlineName = carriers[carrierCode] || AIRLINE_NAMES[carrierCode] || carrierCode;
@@ -76,6 +158,10 @@ exports.transformFlightOffer = (offer, dictionaries = {}) => {
         flightNumber: `${carrierCode}${firstSeg?.number || ''}`,
         from: firstSeg?.departure?.iataCode || '',
         to: lastSeg?.arrival?.iataCode || '',
+        fromCity: getCityName(firstSeg?.departure?.iataCode),
+        toCity: getCityName(lastSeg?.arrival?.iataCode),
+        fromAirport: getAirportName(firstSeg?.departure?.iataCode),
+        toAirport: getAirportName(lastSeg?.arrival?.iataCode),
         departureTime: firstSeg?.departure?.at || '',
         arrivalTime: lastSeg?.arrival?.at || '',
         duration: parseDuration(outbound?.duration),
@@ -85,7 +171,8 @@ exports.transformFlightOffer = (offer, dictionaries = {}) => {
         class: mapClass(offer.travelerPricings?.[0]?.fareDetailsBySegment?.[0]?.cabin),
         seatsAvailable: offer.numberOfBookableSeats || 0,
         stops,
-        stopCities,
+        stopCities: stopCodes,
+        viaCities,
         baggage: {
             cabin: offer.travelerPricings?.[0]?.fareDetailsBySegment?.[0]?.includedCheckedBags?.weight
                 ? `${offer.travelerPricings[0].fareDetailsBySegment[0].includedCheckedBags.weight} ${offer.travelerPricings[0].fareDetailsBySegment[0].includedCheckedBags.weightUnit || 'KG'}`
@@ -96,6 +183,8 @@ exports.transformFlightOffer = (offer, dictionaries = {}) => {
         },
         refundable: !offer.pricingOptions?.fareType?.includes('PUBLISHED') || false,
         isActive: true,
+        // Detailed segments for the outbound journey
+        segments: transformItinerary(outbound),
         // Keep raw offer for pricing confirmation later
         _raw: offer,
     };
@@ -110,26 +199,32 @@ exports.transformFlightOffer = (offer, dictionaries = {}) => {
             flightNumber: `${retFirst?.carrierCode || carrierCode}${retFirst?.number || ''}`,
             from: retFirst?.departure?.iataCode || '',
             to: retLast?.arrival?.iataCode || '',
+            fromCity: getCityName(retFirst?.departure?.iataCode),
+            toCity: getCityName(retLast?.arrival?.iataCode),
+            fromAirport: getAirportName(retFirst?.departure?.iataCode),
+            toAirport: getAirportName(retLast?.arrival?.iataCode),
             departureTime: retFirst?.departure?.at || '',
             arrivalTime: retLast?.arrival?.at || '',
             duration: parseDuration(returnIt?.duration),
             stops: (returnIt?.segments?.length || 1) - 1,
+            segments: transformItinerary(returnIt)
         };
     }
 
-    // Full segments for multi-city/complex itineraries
-    result.itineraries = offer.itineraries.map(it => {
-        const first = it.segments[0];
-        const last = it.segments[it.segments.length - 1];
+    // Full itineraries breakdown
+    result.itineraries = (offer.itineraries || []).map(it => {
+        const itSegs = it.segments || [];
+        const first = itSegs[0];
+        const last = itSegs[itSegs.length - 1];
         return {
-            from: first.departure.iataCode,
-            to: last.arrival.iataCode,
-            departureTime: first.departure.at,
-            arrivalTime: last.arrival.at,
+            from: first?.departure?.iataCode || '',
+            to: last?.arrival?.iataCode || '',
+            departureTime: first?.departure?.at || '',
+            arrivalTime: last?.arrival?.at || '',
             duration: parseDuration(it.duration),
-            stops: it.segments.length - 1,
-            carrierCode: first.carrierCode,
-            airline: carriers[first.carrierCode] || AIRLINE_NAMES[first.carrierCode] || first.carrierCode
+            stops: Math.max(0, itSegs.length - 1),
+            carrierCode: first?.carrierCode || '',
+            airline: carriers[first?.carrierCode] || AIRLINE_NAMES[first?.carrierCode] || first?.carrierCode || ''
         };
     });
 
@@ -156,6 +251,15 @@ exports.transformHotelOffer = (hotelData) => {
     const room = firstOffer.room || {};
     const price = firstOffer.price || {};
 
+    const checkInDate = firstOffer.checkInDate || hotelData.offers?.[0]?.checkInDate;
+    const checkOutDate = firstOffer.checkOutDate || hotelData.offers?.[0]?.checkOutDate;
+    let nights = 1;
+    if (checkInDate && checkOutDate) {
+        const start = new Date(checkInDate);
+        const end = new Date(checkOutDate);
+        nights = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+    }
+
     return {
         _id: hotel.hotelId || hotel.dupeId || `amadeus-${Math.random().toString(36).slice(2)}`,
         source: 'amadeus',
@@ -173,7 +277,7 @@ exports.transformHotelOffer = (hotelData) => {
             lng: hotel.longitude || 0,
         },
         description: hotel.description?.text || room.description?.text || '',
-        pricePerNight: parseFloat(price.total) || 0,
+        pricePerNight: (parseFloat(price.total) || 0) / nights,
         currency: price.currency || 'INR',
         freeCancellation: firstOffer.policies?.cancellation?.type === 'FULL_REFUNDABLE',
         isActive: true,

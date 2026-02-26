@@ -16,7 +16,7 @@ export const currencies = [
 export const GlobalProvider = ({ children }) => {
     const [currency, setCurrency] = useState(() => {
         try {
-            const saved = localStorage.getItem('travelgo_currency');
+            const saved = localStorage.getItem('rajtravel_currency');
             return saved ? JSON.parse(saved) : currencies[0];
         } catch (error) {
             console.error("Currency parse error:", error);
@@ -25,7 +25,7 @@ export const GlobalProvider = ({ children }) => {
     });
 
     useEffect(() => {
-        localStorage.setItem('travelgo_currency', JSON.stringify(currency));
+        localStorage.setItem('rajtravel_currency', JSON.stringify(currency));
     }, [currency]);
 
     const formatPrice = (amount) => {

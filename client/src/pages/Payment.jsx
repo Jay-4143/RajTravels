@@ -68,8 +68,8 @@ const Payment = () => {
                                 </select>
                             </div>
                             <div className="space-y-1">
-                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">AT - Reference No</label>
-                                <input type="text" placeholder="AT - Reference No" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500" />
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">TG - Reference No</label>
+                                <input type="text" placeholder="TG - Reference No" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500" />
                             </div>
                             <div className="space-y-1">
                                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Net Fare</label>
@@ -172,7 +172,7 @@ const Payment = () => {
                     </div>
 
                     <p className="text-[10px] text-slate-400 text-center px-10 leading-relaxed">
-                        By click on Make Payment, I agree with the <span className="text-blue-500 underline cursor-pointer">Booking Policies</span>, <span className="text-blue-500 underline cursor-pointer">Privacy policy & Terms</span>, the Visa Rules and the T&Cs of Akbartravels.com. <span className="text-slate-900 font-bold">Read More</span>
+                        By click on Make Payment, I agree with the <span className="text-blue-500 underline cursor-pointer">Booking Policies</span>, <span className="text-blue-500 underline cursor-pointer">Privacy policy & Terms</span>, the Visa Rules and the T&Cs of RajTravel.com. <span className="text-slate-900 font-bold">Read More</span>
                     </p>
 
                 </div>

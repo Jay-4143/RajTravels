@@ -121,7 +121,7 @@ const UserDashboard = () => {
                         {/* Bottom Info Banner */}
                         <div className="bg-blue-600 rounded-2xl p-6 text-white flex items-center justify-between shadow-xl shadow-blue-100">
                             <div>
-                                <h4 className="font-black text-lg">Download TravelGO App</h4>
+                                <h4 className="font-black text-lg">Download Raj Travel App</h4>
                                 <p className="text-blue-100 text-sm">Book flights, hotels & more on the go!</p>
                             </div>
                             <button className="bg-white text-blue-600 px-6 py-2 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors">

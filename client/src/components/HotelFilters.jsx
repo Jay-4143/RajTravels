@@ -80,23 +80,41 @@ const FilterSection = ({ title, children, defaultOpen = true }) => {
     );
 };
 
-/** A standard checkbox row */
-const CheckRow = ({ label, subLabel, checked, onChange, bold = false }) => (
-    <label className="flex items-center gap-2.5 cursor-pointer py-0.5 group">
-        <input
-            type="checkbox"
-            checked={checked}
-            onChange={onChange}
-            className="w-4 h-4 rounded border-gray-300 text-blue-600 accent-blue-600 cursor-pointer shrink-0"
-        />
-        <span className={`text-sm group-hover:text-blue-600 transition-colors ${bold ? "font-semibold text-gray-800" : "text-gray-700"}`}>
-            {label}
-            {subLabel && (
-                <span className="text-xs text-gray-400 font-normal block leading-tight">
-                    {subLabel}
-                </span>
+/** A standard checkbox row with custom styling for reliability */
+const CheckRow = ({ label, subLabel, checked, onChange, bold = false, children }) => (
+    <label className="flex items-start gap-3 cursor-pointer py-1.5 group select-none">
+        <div className="relative flex items-center justify-center mt-0.5">
+            <input
+                type="checkbox"
+                checked={checked}
+                onChange={onChange}
+                className="sr-only"
+            />
+            <div className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center
+                ${checked
+                    ? "bg-blue-600 border-blue-600"
+                    : "bg-white border-gray-300 group-hover:border-blue-500"
+                }`}
+            >
+                {checked && (
+                    <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
+                    </svg>
+                )}
+            </div>
+        </div>
+        <div className={`text-sm group-hover:text-blue-600 transition-colors ${bold ? "font-bold text-gray-800" : "text-gray-700"}`}>
+            {children || (
+                <>
+                    {label}
+                    {subLabel && (
+                        <span className="text-[10px] text-gray-400 font-normal block leading-tight mt-0.5">
+                            {subLabel}
+                        </span>
+                    )}
+                </>
             )}
-        </span>
+        </div>
     </label>
 );
 
@@ -145,11 +163,15 @@ const HotelFilters = ({ filterParams, onFilterChange }) => {
 
     const setPriceRange = (range) => {
         const active =
-            filterParams.minPrice === range.min && filterParams.maxPrice === range.max;
+            (filterParams.minPrice ?? undefined) === (range.min ?? undefined) &&
+            (filterParams.maxPrice ?? undefined) === (range.max ?? undefined);
         if (active) {
             onFilterChange({ minPrice: undefined, maxPrice: undefined });
         } else {
-            onFilterChange({ minPrice: range.min || undefined, maxPrice: range.max || undefined });
+            onFilterChange({
+                minPrice: range.min ?? undefined,
+                maxPrice: range.max ?? undefined
+            });
         }
     };
 
@@ -250,34 +272,34 @@ const HotelFilters = ({ filterParams, onFilterChange }) => {
                     <FilterSection title="Star Rating">
                         <div className="space-y-1">
                             {STAR_OPTIONS.map(({ stars }) => (
-                                <label key={stars} className="flex items-center gap-2.5 cursor-pointer py-0.5 group">
-                                    <input
-                                        type="checkbox"
-                                        checked={filterParams.stars?.includes(stars) || false}
-                                        onChange={() => toggleArrayItem("stars", stars)}
-                                        className="w-4 h-4 rounded border-gray-300 text-blue-600 accent-blue-600 cursor-pointer shrink-0"
-                                    />
-                                    <span className="flex items-center gap-0.5">
-                                        {Array.from({ length: 5 }).map((_, i) => (
-                                            <FaStar
-                                                key={i}
-                                                className={`text-xs ${i < stars ? "text-yellow-400" : "text-gray-200"}`}
-                                            />
-                                        ))}
-                                    </span>
-                                    <span className="text-xs text-gray-500">{stars} Star</span>
-                                </label>
+                                <CheckRow
+                                    key={stars}
+                                    checked={filterParams.stars?.includes(stars) || false}
+                                    onChange={() => toggleArrayItem("stars", stars)}
+                                >
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="flex items-center gap-0.5">
+                                            {Array.from({ length: 5 }).map((_, i) => (
+                                                <FaStar
+                                                    key={i}
+                                                    className={`text-xs ${i < stars ? "text-yellow-400" : "text-gray-200"}`}
+                                                />
+                                            ))}
+                                        </div>
+                                        <span className="text-xs text-gray-500 font-medium">{stars} Star</span>
+                                    </div>
+                                </CheckRow>
                             ))}
                         </div>
                     </FilterSection>
 
                     {/* 5. Price Range */}
-                    <FilterSection title="Price Range">
+                    <FilterSection title="Price Range (per night)">
                         <div className="space-y-1 mb-3">
                             {PRICE_RANGES.map((range) => {
                                 const active =
-                                    filterParams.minPrice === range.min &&
-                                    filterParams.maxPrice === range.max;
+                                    (filterParams.minPrice ?? undefined) === (range.min ?? undefined) &&
+                                    (filterParams.maxPrice ?? undefined) === (range.max ?? undefined);
                                 return (
                                     <CheckRow
                                         key={range.label}

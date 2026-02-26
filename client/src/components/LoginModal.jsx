@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { HiX, HiEye, HiEyeOff } from "react-icons/hi";
 import { FaCheckCircle, FaEnvelope } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
+import { validateField } from "../utils/validationRules";
+import ValidationError from "./common/ValidationError";
 
 const PROMO_FEATURES = [
     "Easy booking",
@@ -249,9 +252,12 @@ const OtpScreen = ({ email, onVerified, onResend, onBack }) => {
 /*        Main Login Modal Component                */
 /* ================================================ */
 const LoginModal = ({ isOpen, onClose }) => {
+    const navigate = useNavigate();
+    const location = useLocation();
     const { login, register, googleLogin } = useAuth();
     const [mode, setMode] = useState("login"); // "login" | "register" | "otp"
     const [formData, setFormData] = useState({ name: "", email: "", password: "" });
+    const [fieldErrors, setFieldErrors] = useState({});
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const [pendingEmail, setPendingEmail] = useState("");
@@ -260,35 +266,84 @@ const LoginModal = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setFormData({ ...formData, [name]: value });
+
+        // Clear error when typing
+        if (fieldErrors[name]) {
+            setFieldErrors(prev => ({ ...prev, [name]: null }));
+        }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
+
+        // Frontend Validation
+        const errors = {};
+        if (mode === "register") {
+            const nameErr = validateField('name', formData.name);
+            if (nameErr) errors.name = nameErr;
+        }
+        const emailErr = validateField('email', formData.email);
+        if (emailErr) errors.email = emailErr;
+
+        const passwordErr = validateField('password', formData.password);
+        if (passwordErr) errors.password = passwordErr;
+
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors);
+            return;
+        }
+
         setLoading(true);
 
         try {
             if (mode === "login") {
                 const result = await login(formData.email, formData.password);
                 if (result.success) {
+                    const returnTo = location.state?.returnTo;
+                    if (returnTo) {
+                        navigate(returnTo, { state: { ...location.state, returnTo: undefined }, replace: true });
+                    }
                     resetAndClose();
                 } else if (result.requiresVerification) {
-                    // Email not verified — switch to OTP screen
                     setPendingEmail(result.email || formData.email);
                     setMode("otp");
                 } else {
-                    setError(result.message);
+                    if (result.errors) {
+                        const backendErrors = {};
+                        result.errors.forEach(err => {
+                            backendErrors[err.field] = err.message;
+                        });
+                        setFieldErrors(backendErrors);
+                    } else {
+                        setError(result.message);
+                    }
                 }
             } else if (mode === "register") {
                 const result = await register(formData.name, formData.email, formData.password);
-                if (result.success && result.requiresVerification) {
-                    setPendingEmail(result.email || formData.email);
-                    setMode("otp");
-                } else if (result.success) {
-                    resetAndClose();
+                if (result.success) {
+                    if (result.requiresVerification) {
+                        setPendingEmail(result.email || formData.email);
+                        setMode("otp");
+                    } else {
+                        const returnTo = location.state?.returnTo;
+                        if (returnTo) {
+                            navigate(returnTo, { state: { ...location.state, returnTo: undefined }, replace: true });
+                        }
+                        resetAndClose();
+                    }
                 } else {
-                    setError(result.message);
+                    if (result.errors) {
+                        const backendErrors = {};
+                        result.errors.forEach(err => {
+                            backendErrors[err.field] = err.message;
+                        });
+                        setFieldErrors(backendErrors);
+                    } else {
+                        setError(result.message);
+                    }
                 }
             }
         } catch (err) {
@@ -304,6 +359,10 @@ const LoginModal = ({ isOpen, onClose }) => {
         const result = await googleLogin(googleData);
         setLoading(false);
         if (result.success) {
+            const returnTo = location.state?.returnTo;
+            if (returnTo) {
+                navigate(returnTo, { state: { ...location.state, returnTo: undefined }, replace: true });
+            }
             resetAndClose();
         } else {
             setError(result.message);
@@ -311,11 +370,16 @@ const LoginModal = ({ isOpen, onClose }) => {
     };
 
     const handleOtpVerified = () => {
+        const returnTo = location.state?.returnTo;
+        if (returnTo) {
+            navigate(returnTo, { state: { ...location.state, returnTo: undefined }, replace: true });
+        }
         resetAndClose();
     };
 
     const resetAndClose = () => {
         setFormData({ name: "", email: "", password: "" });
+        setFieldErrors({});
         setError("");
         setMode("login");
         setPendingEmail("");
@@ -324,6 +388,7 @@ const LoginModal = ({ isOpen, onClose }) => {
 
     const switchMode = () => {
         setMode(mode === "login" ? "register" : "login");
+        setFieldErrors({});
         setError("");
     };
 
@@ -345,12 +410,12 @@ const LoginModal = ({ isOpen, onClose }) => {
                     {/* Left Side: Promo */}
                     <div className="hidden md:flex flex-col justify-center w-[380px] bg-gradient-to-br from-slate-50 to-blue-50 px-10 py-10 border-r border-gray-100 flex-shrink-0">
                         <div className="mb-6">
-                            <h2 className="text-2xl font-bold text-blue-600">TravelGO</h2>
-                            <p className="text-xs text-gray-400 mt-0.5">Your Reliable Travel Partner</p>
+                            <h2 className="text-2xl font-brand font-black text-blue-600 leading-none">Raj Travel</h2>
+                            <p className="text-[10px] font-tagline font-bold text-gray-400 uppercase tracking-widest mt-1.5">Your Trusted Journey Partner</p>
                         </div>
 
                         <p className="text-gray-700 text-sm leading-relaxed mb-6">
-                            Take a chill and enjoy your travel with TravelGO
+                            Take a chill and enjoy your travel with Raj Travel
                         </p>
 
                         <div className="space-y-3 mb-8">
@@ -391,7 +456,7 @@ const LoginModal = ({ isOpen, onClose }) => {
                             </button>
 
                             <h2 className="text-2xl font-bold text-gray-900 mb-1">
-                                {mode === "login" ? "Login to TravelGO" : "Create Account"}
+                                {mode === "login" ? "Login to Raj Travel" : "Create Account"}
                             </h2>
                             <p className="text-sm text-gray-500 mb-6">
                                 {mode === "login"
@@ -415,9 +480,9 @@ const LoginModal = ({ isOpen, onClose }) => {
                                             placeholder="Full Name"
                                             value={formData.name}
                                             onChange={handleChange}
-                                            required
-                                            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow"
+                                            className={`w-full border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow ${fieldErrors.name ? 'border-red-500 bg-red-50/30' : 'border-gray-300'}`}
                                         />
+                                        <ValidationError message={fieldErrors.name} />
                                     </div>
                                 )}
 
@@ -429,9 +494,9 @@ const LoginModal = ({ isOpen, onClose }) => {
                                         placeholder="Email ID"
                                         value={formData.email}
                                         onChange={handleChange}
-                                        required
-                                        className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow"
+                                        className={`w-full border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow ${fieldErrors.email ? 'border-red-500 bg-red-50/30' : 'border-gray-300'}`}
                                     />
+                                    <ValidationError message={fieldErrors.email} />
                                 </div>
 
                                 <div className="relative">
@@ -442,9 +507,9 @@ const LoginModal = ({ isOpen, onClose }) => {
                                         placeholder="Password"
                                         value={formData.password}
                                         onChange={handleChange}
-                                        required
-                                        className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow pr-12"
+                                        className={`w-full border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow pr-12 ${fieldErrors.password ? 'border-red-500 bg-red-50/30' : 'border-gray-300'}`}
                                     />
+                                    <ValidationError message={fieldErrors.password} />
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}

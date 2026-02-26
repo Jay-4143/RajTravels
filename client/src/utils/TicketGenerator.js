@@ -17,7 +17,7 @@ export const generateTicket = (booking, type) => {
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(28);
         doc.setFont('helvetica', 'bold');
-        doc.text('TravelGO', 15, 25);
+        doc.text('Raj Travel', 15, 25);
         doc.setFontSize(14);
         doc.text(title, 15, 35);
 
@@ -36,8 +36,8 @@ export const generateTicket = (booking, type) => {
             doc.setPage(i);
             doc.setFontSize(8);
             doc.setTextColor(150, 150, 150);
-            doc.text('TravelGO Customer Support: +91 1800-TRAVEL-GO | help@travelgo.com', 105, 285, { align: 'center' });
-            doc.text('Scan for support or visit travelgo.com/help', 105, 290, { align: 'center' });
+            doc.text('Raj Travel Customer Support: +91 1800-RAJ-TRAVEL | help@rajtravel.com', 105, 285, { align: 'center' });
+            doc.text('Scan for support or visit rajtravel.com/help', 105, 290, { align: 'center' });
         }
     };
 
@@ -249,7 +249,7 @@ export const generateTicket = (booking, type) => {
         addInstructions([
             'Welcome kit will be provided at the airport.',
             'Itinerary is subject to weather conditions.',
-            'Keep your TravelGO holiday manager contact handy.',
+            'Keep your Raj Travel holiday manager contact handy.',
             'Tipping is voluntary but appreciated by guides.'
         ]);
     }
@@ -266,6 +266,6 @@ export const generateTicket = (booking, type) => {
     doc.text('Status: PAID & CONFIRMED ✅', 15, finalY + 18);
 
     addFooter();
-    const fileName = `TravelGO_${type}_${booking.bookingReference || booking.pnr || booking.id || booking._id}.pdf`;
+    const fileName = `RajTravel_${type}_${booking.bookingReference || booking.pnr || booking.id || booking._id}.pdf`;
     doc.save(fileName.replace(/\s+/g, '_'));
 };

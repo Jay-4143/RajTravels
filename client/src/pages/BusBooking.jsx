@@ -10,6 +10,8 @@ import { MdEventSeat } from 'react-icons/md';
 import PaymentModal from '../components/PaymentModal';
 import { useGlobal } from '../context/GlobalContext';
 import { generateTicket } from '../utils/TicketGenerator';
+import { validateField, validateDates } from '../utils/validationRules';
+import ValidationError from '../components/common/ValidationError';
 
 // ─── Seat Map Component ────────────────────────────────────────────────────
 const SeatMap = ({ seats, selectedSeats, onToggleSeat, deck = 'lower' }) => {
@@ -186,6 +188,7 @@ const BusBooking = () => {
     const [createdBooking, setCreatedBooking] = useState(null);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [fieldErrors, setFieldErrors] = useState({});
     const [bookingError, setBookingError] = useState('');
     const { formatPrice } = useGlobal();
 
@@ -223,6 +226,43 @@ const BusBooking = () => {
 
     const updatePassenger = (index, field, value) => {
         setPassengers(prev => prev.map((p, i) => i === index ? { ...p, [field]: value } : p));
+        if (fieldErrors[`p${index}_${field}`]) {
+            setFieldErrors(prev => {
+                const updated = { ...prev };
+                delete updated[`p${index}_${field}`];
+                return updated;
+            });
+        }
+    };
+
+    const handleStep2Submit = () => {
+        const errors = {};
+
+        // Validate Contact Info
+        const nameErr = validateField('name', contactInfo.name);
+        if (nameErr) errors.contactName = nameErr;
+
+        const emailErr = validateField('email', contactInfo.email);
+        if (emailErr) errors.contactEmail = emailErr;
+
+        const phoneErr = validateField('mobile', contactInfo.phone);
+        if (phoneErr) errors.contactPhone = phoneErr;
+
+        // Validate Passengers
+        passengers.forEach((p, i) => {
+            const pNameErr = validateField('name', p.name);
+            if (pNameErr) errors[`p${i}_name`] = pNameErr;
+
+            if (!p.age) errors[`p${i}_age`] = "Age is required";
+            else if (p.age < 1 || p.age > 120) errors[`p${i}_age`] = "Invalid age";
+        });
+
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors);
+            return;
+        }
+
+        setStep(3);
     };
 
     const handleSubmitBooking = async () => {
@@ -376,29 +416,41 @@ const BusBooking = () => {
                                     <div className="relative">
                                         <FaUser className="absolute left-3 top-3 text-gray-400" />
                                         <input
-                                            type="text" required placeholder="Full Name"
-                                            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                            type="text" placeholder="Full Name"
+                                            className={`w-full pl-9 pr-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none ${fieldErrors.contactName ? 'border-red-500 bg-red-50/30' : 'border-gray-200'}`}
                                             value={contactInfo.name}
-                                            onChange={e => setContactInfo({ ...contactInfo, name: e.target.value })}
+                                            onChange={e => {
+                                                setContactInfo({ ...contactInfo, name: e.target.value });
+                                                if (fieldErrors.contactName) setFieldErrors(prev => ({ ...prev, contactName: null }));
+                                            }}
                                         />
+                                        <ValidationError message={fieldErrors.contactName} />
                                     </div>
                                     <div className="relative">
                                         <FaEnvelope className="absolute left-3 top-3 text-gray-400" />
                                         <input
-                                            type="email" required placeholder="Email Address"
-                                            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                            type="email" placeholder="Email Address"
+                                            className={`w-full pl-9 pr-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none ${fieldErrors.contactEmail ? 'border-red-500 bg-red-50/30' : 'border-gray-200'}`}
                                             value={contactInfo.email}
-                                            onChange={e => setContactInfo({ ...contactInfo, email: e.target.value })}
+                                            onChange={e => {
+                                                setContactInfo({ ...contactInfo, email: e.target.value });
+                                                if (fieldErrors.contactEmail) setFieldErrors(prev => ({ ...prev, contactEmail: null }));
+                                            }}
                                         />
+                                        <ValidationError message={fieldErrors.contactEmail} />
                                     </div>
                                     <div className="relative">
                                         <FaPhone className="absolute left-3 top-3 text-gray-400" />
                                         <input
-                                            type="tel" required placeholder="Phone Number"
-                                            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                            type="tel" placeholder="Phone Number"
+                                            className={`w-full pl-9 pr-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none ${fieldErrors.contactPhone ? 'border-red-500 bg-red-50/30' : 'border-gray-200'}`}
                                             value={contactInfo.phone}
-                                            onChange={e => setContactInfo({ ...contactInfo, phone: e.target.value })}
+                                            onChange={e => {
+                                                setContactInfo({ ...contactInfo, phone: e.target.value });
+                                                if (fieldErrors.contactPhone) setFieldErrors(prev => ({ ...prev, contactPhone: null }));
+                                            }}
                                         />
+                                        <ValidationError message={fieldErrors.contactPhone} />
                                     </div>
                                 </div>
                             </div>
@@ -413,20 +465,22 @@ const BusBooking = () => {
                                         <div className="md:col-span-1">
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
                                             <input
-                                                type="text" required placeholder="Passenger Name"
-                                                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                                type="text" placeholder="Passenger Name"
+                                                className={`w-full px-3 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none ${fieldErrors[`p${i}_name`] ? 'border-red-500 bg-red-50/30' : 'border-gray-200'}`}
                                                 value={p.name}
                                                 onChange={e => updatePassenger(i, 'name', e.target.value)}
                                             />
+                                            <ValidationError message={fieldErrors[`p${i}_name`]} />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
                                             <input
-                                                type="number" required placeholder="Age" min="1" max="120"
-                                                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                                type="number" placeholder="Age" min="1" max="120"
+                                                className={`w-full px-3 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none ${fieldErrors[`p${i}_age`] ? 'border-red-500 bg-red-50/30' : 'border-gray-200'}`}
                                                 value={p.age}
                                                 onChange={e => updatePassenger(i, 'age', e.target.value)}
                                             />
+                                            <ValidationError message={fieldErrors[`p${i}_age`]} />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
@@ -439,15 +493,15 @@ const BusBooking = () => {
                                                 <option>Female</option>
                                                 <option>Other</option>
                                             </select>
+                                            <ValidationError message={fieldErrors[`p${i}_gender`]} />
                                         </div>
                                     </div>
                                 </div>
                             ))}
 
                             <button
-                                onClick={() => setStep(3)}
-                                disabled={!isStep2Valid}
-                                className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                onClick={handleStep2Submit}
+                                className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition active:scale-[0.98]"
                             >
                                 Review Booking →
                             </button>

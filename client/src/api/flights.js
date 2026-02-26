@@ -23,6 +23,7 @@ export const searchFlights = (params) => {
   if (params.arrivalTimeTo) q.set('arrivalTimeTo', params.arrivalTimeTo);
   q.set('page', params.page || 1);
   q.set('limit', params.limit || 50);
+  q.set('_t', Date.now());
   return api.get(`/flights/search?${q.toString()}`);
 };
 

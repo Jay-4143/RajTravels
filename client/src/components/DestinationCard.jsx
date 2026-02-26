@@ -9,6 +9,7 @@ const DestinationCard = ({ title, image, startingPrice, slug = "#" }) => {
       <img
         src={image}
         alt={title}
+        loading="lazy"
         className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         onError={e => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600'; }}
       />

@@ -40,7 +40,7 @@ app.use(cors({
 // Rate limiting - protect against brute force
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 500, // Increased to 500 for smoother testing
   message: { success: false, message: 'Too many requests, please try again later' }
 });
 app.use('/api/', limiter);
@@ -48,7 +48,7 @@ app.use('/api/', limiter);
 // Stricter rate limit for auth endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 50,
+  max: 100, // Increased to 100
   message: { success: false, message: 'Too many auth attempts, please try again later' }
 });
 app.use('/api/auth/login', authLimiter);

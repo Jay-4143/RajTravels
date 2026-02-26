@@ -34,12 +34,21 @@ const CalendarComponent = ({
   onSelectDeparture,
   onSelectReturn,
   isRoundTrip,
+  departureLabel = "DEPARTURE",
+  returnLabel = "RETURN",
   className = "",
-  style = {}
+  style = {},
+  variant = "flight", // "flight" | "hotel"
+  showFares = true,
+  onSwitchField = null // Callback to switch active field
 }) => {
   const panelRef = useRef(null);
   const dep = parseDate(departureDate);
   const ret = parseDate(returnDate);
+
+  const isHotel = variant === "hotel";
+  // Force showFares to false if isHotel is true
+  const actualShowFares = isHotel ? false : showFares;
 
   const [leftDate, setLeftDate] = useState(() => {
     const d = dep || new Date();
@@ -94,7 +103,11 @@ const CalendarComponent = ({
           onClose();
         }
       } else {
-        onSelectDeparture(dateStr);
+        if (activeField === "return") {
+          onSelectReturn(dateStr);
+        } else {
+          onSelectDeparture(dateStr);
+        }
         onClose();
       }
     }
@@ -120,11 +133,12 @@ const CalendarComponent = ({
       ref={panelRef}
       className={`absolute z-[100] bg-white rounded-2xl shadow-2xl border border-slate-100 animate-in fade-in slide-in-from-top-4 duration-300 max-h-[85vh] overflow-y-auto thick-scrollbar ${className}`}
       style={{
-        left: '50%',
-        transform: 'translateX(-50%)',
-        top: '8px',
-        width: 'calc(100% - 1rem)',
-        maxWidth: '780px',
+        left: isHotel ? 'auto' : '50%',
+        right: isHotel ? '0' : 'auto',
+        transform: isHotel ? 'none' : 'translateX(-50%)',
+        top: isHotel ? '12px' : '8px',
+        width: isHotel ? '800px' : 'calc(100% - 1rem)',
+        maxWidth: '850px',
         ...style
       }}
     >
@@ -137,29 +151,36 @@ const CalendarComponent = ({
         >
           <FaChevronLeft className="w-4 h-4" />
         </button>
-        <div className="flex items-center gap-5">
-          <div className="flex flex-col">
-            <span className="text-[10px] font-semibold text-gray-500">DEPARTURE</span>
-            <span className={`text-xs font-semibold pb-1 ${activeField === "departure" ? "text-gray-900 border-b-2 border-red-600" : "text-gray-700"}`}>
-              {dep ? formatHeaderDate(dep) : "Select"}
+        <div className="flex items-center gap-8 px-4">
+          <button
+            type="button"
+            onClick={() => onSwitchField && onSwitchField("departure")}
+            className={`flex flex-col py-2 transition-all relative ${activeField === "departure" ? "opacity-100" : "opacity-50 hover:opacity-100"}`}
+          >
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{isHotel ? "CHECK-IN" : departureLabel}</span>
+            <span className="text-sm font-black text-slate-800 tracking-tight">
+              {dep ? formatHeaderDate(dep) : "Select Date"}
             </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-semibold text-gray-500">RETURN</span>
-            <span className={`text-xs font-semibold pb-1 ${activeField === "return" ? "text-gray-900 border-b-2 border-red-600" : "text-gray-700"}`}>
-              {ret ? formatHeaderDate(ret) : isRoundTrip ? "Select" : "—"}
-            </span>
-            {ret && isRoundTrip && (
-              <button
-                type="button"
-                onClick={() => onSelectReturn(null)}
-                className="text-gray-400 hover:text-gray-600 p-1 rounded transition-colors"
-                aria-label="Clear return"
-              >
-                <span className="text-base font-bold">×</span>
-              </button>
+            {activeField === "departure" && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600 rounded-full" />
             )}
-          </div>
+          </button>
+
+          <div className="h-8 w-px bg-gray-200 mt-2" />
+
+          <button
+            type="button"
+            onClick={() => onSwitchField && onSwitchField("return")}
+            className={`flex flex-col py-2 transition-all relative ${activeField === "return" ? "opacity-100" : "opacity-50 hover:opacity-100"}`}
+          >
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{isHotel ? "CHECK-OUT" : returnLabel}</span>
+            <span className="text-sm font-black text-slate-800 tracking-tight">
+              {ret ? formatHeaderDate(ret) : (isRoundTrip || isHotel) ? "Select Date" : "—"}
+            </span>
+            {activeField === "return" && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600 rounded-full" />
+            )}
+          </button>
         </div>
         <button
           type="button"
@@ -210,9 +231,11 @@ const CalendarComponent = ({
                     }`}
                 >
                   <span className="text-xs font-semibold leading-none">{day.getDate()}</span>
-                  <span className={`text-[9px] font-normal mt-0.5 leading-none ${past ? "text-gray-300" : isSelected ? "text-white/90" : lowFare ? "text-green-600 font-medium" : "text-gray-400"}`}>
-                    {past ? "—" : fare}
-                  </span>
+                  {actualShowFares && (
+                    <span className={`text-[9px] font-normal mt-0.5 leading-none ${past ? "text-gray-300" : isSelected ? "text-white/90" : lowFare ? "text-green-600 font-medium" : "text-gray-400"}`}>
+                      {past ? "—" : fare}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -257,9 +280,11 @@ const CalendarComponent = ({
                     }`}
                 >
                   <span className="text-xs font-semibold leading-none">{day.getDate()}</span>
-                  <span className={`text-[9px] font-normal mt-0.5 leading-none ${past ? "text-gray-300" : isSelected ? "text-white/90" : lowFare ? "text-green-600 font-medium" : "text-gray-400"}`}>
-                    {past ? "—" : fare}
-                  </span>
+                  {actualShowFares && (
+                    <span className={`text-[9px] font-normal mt-0.5 leading-none ${past ? "text-gray-300" : isSelected ? "text-white/90" : lowFare ? "text-green-600 font-medium" : "text-gray-400"}`}>
+                      {past ? "—" : fare}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -267,9 +292,11 @@ const CalendarComponent = ({
         </div>
       </div>
 
-      <div className="px-4 sm:px-5 py-2 border-t border-gray-200 flex justify-end bg-white">
-        <span className="text-[10px] font-medium text-red-600">* All fares are in INR</span>
-      </div>
+      {!isHotel && (
+        <div className="px-4 sm:px-5 py-2 border-t border-gray-200 flex justify-end bg-white">
+          <span className="text-[10px] font-medium text-red-600">* All fares are in INR</span>
+        </div>
+      )}
     </div>
   );
 };

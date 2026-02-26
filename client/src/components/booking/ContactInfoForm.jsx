@@ -1,5 +1,5 @@
-import React from 'react';
 import { FaPaperPlane, FaClock } from 'react-icons/fa';
+import ValidationError from '../common/ValidationError';
 
 const ContactInfoForm = ({
     mobile,
@@ -17,7 +17,8 @@ const ContactInfoForm = ({
     gstPincode,
     onGstPincodeChange,
     saveGst,
-    onSaveGstToggle
+    onSaveGstToggle,
+    errors = {}
 }) => {
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
@@ -48,6 +49,7 @@ const ContactInfoForm = ({
                                 className="flex-1 px-4 py-2.5 text-xs font-bold text-gray-700 outline-none"
                             />
                         </div>
+                        <ValidationError message={errors.mobile} />
                     </div>
                     <div className="relative">
                         <input
@@ -55,8 +57,9 @@ const ContactInfoForm = ({
                             value={email}
                             onChange={(e) => onEmailChange(e.target.value)}
                             placeholder="Email"
-                            className="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-xs font-bold text-gray-700 focus:ring-2 focus:ring-blue-100 outline-none"
+                            className={`w-full border rounded-lg px-4 py-2.5 text-xs font-bold text-gray-700 focus:ring-2 focus:ring-blue-100 outline-none ${errors.email ? 'border-red-500 bg-red-50/30' : 'border-slate-200'}`}
                         />
+                        <ValidationError message={errors.email} />
                     </div>
                 </div>
 
@@ -134,8 +137,8 @@ const ContactInfoForm = ({
                         </div>
                     )}
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 

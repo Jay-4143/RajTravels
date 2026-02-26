@@ -4,11 +4,11 @@ import Footer from "../components/Footer";
 
 const serviceData = {
     academy: {
-        title: "TravelGO Academy",
+        title: "Raj Travel Academy",
         tagline: "Build Your Career in Travel & Tourism",
         icon: FaGraduationCap,
         color: "from-blue-600 to-indigo-700",
-        description: "TravelGO Academy offers professional training courses in travel, tourism, and hospitality management. Get industry-recognized certifications and hands-on experience.",
+        description: "Raj Travel Academy offers professional training courses in travel, tourism, and hospitality management. Get industry-recognized certifications and hands-on experience.",
         features: ["IATA Certified Courses", "GDS Training (Amadeus, Sabre, Galileo)", "Diploma in Travel & Tourism", "Air Ticketing & Fare Construction", "Hotel Management Basics", "100% Placement Assistance"],
         image: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800",
     },
@@ -199,20 +199,18 @@ const Services = () => {
                                             <p className="font-semibold">+91 98765 43210</p>
                                         </div>
                                     </a>
-                                    <a href="mailto:info@travelgo.com" className="flex items-center gap-3 text-white/90 hover:text-white transition-colors">
-                                        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                                            <FaEnvelope className="w-4 h-4" />
+                                    <a href="mailto:info@rajtravel.com" className="flex items-center gap-3 text-white/90 hover:text-white transition-colors">
+                                        <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
+                                            <FaEnvelope className="w-5 h-5 text-blue-400" />
                                         </div>
                                         <div>
-                                            <p className="text-xs text-white/70">Email</p>
-                                            <p className="font-semibold">info@travelgo.com</p>
+                                            <p className="text-xs text-blue-300 font-medium uppercase tracking-wider">Email Us</p>
+                                            <p className="font-semibold">info@rajtravel.com</p>
                                         </div>
                                     </a>
                                 </div>
-
                                 <button
-                                    type="button"
-                                    onClick={() => window.open("mailto:info@travelgo.com?subject=" + encodeURIComponent(title + " Inquiry"), "_blank")}
+                                    onClick={() => window.open("mailto:info@rajtravel.com?subject=" + encodeURIComponent(title + " Inquiry"), "_blank")}
                                     className="w-full py-3 bg-white text-gray-900 font-bold rounded-xl hover:bg-gray-100 transition-colors shadow-lg"
                                 >
                                     Send Inquiry

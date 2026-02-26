@@ -47,7 +47,7 @@ const SearchSummaryBar = ({ searchParams, onModify }) => {
   };
 
   return (
-    <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white sticky top-0 z-40 shadow-lg">
+    <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white sticky top-16 z-40 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-0 py-3">
           {searchParams.tripType === "multi-city" ? (
@@ -138,16 +138,48 @@ const Flights = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const searchExecuted = useRef(false);
-  const [searchParams, setSearchParams] = useState(null);
+  const [searchParams, setSearchParams] = useState(() => {
+    const s = location.state;
+    // More lenient check for search data
+    const hasAnyData = s && (s.from || s.to || s.departureDate || (s.tripType === 'multi-city' && s.segments));
+    if (hasAnyData) {
+      return {
+        from: s.from,
+        to: s.to,
+        fromCity: s.fromCity || s.from,
+        toCity: s.toCity || s.to,
+        departureDate: s.departureDate,
+        returnDate: s.returnDate,
+        adults: s.adults || 1,
+        children: s.children || 0,
+        infants: s.infants || 0,
+        travelClass: s.travelClass || "economy",
+        tripType: s.tripType || "one-way",
+        segments: s.segments,
+        specialFare: s.specialFare
+      };
+    }
+    return null;
+  });
   const [filterParams, setFilterParams] = useState({});
   const [sort, setSort] = useState("price");
   const [order, setOrder] = useState("asc");
-  const [flights, setFlights] = useState([]);
-  const [returnFlights, setReturnFlights] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [flights, setFlights] = useState(location.state?.flights || []);
+  const [totalFlights, setTotalFlights] = useState(0);
+  const [returnFlights, setReturnFlights] = useState(location.state?.returnFlights || []);
+  const [loading, setLoading] = useState(() => {
+    if (location.state?.flights?.length > 0) return false;
+    const s = location.state;
+    return !!((s?.from?.length === 3 && s?.to?.length === 3 && s?.departureDate) ||
+      (s?.tripType === 'multi-city' && s?.segments?.length > 0));
+  });
   const [error, setError] = useState(null);
-  const [showHero, setShowHero] = useState(!(location.state?.from || location.state?.departureDate));
-  const [isModifying, setIsModifying] = useState(false);
+  const [showHero, setShowHero] = useState(() => {
+    const s = location.state;
+    const hasData = s && (s.from || (s.tripType === 'multi-city' && s.segments));
+    return !hasData;
+  });
+  const [isModifying, setIsModifying] = useState(location.state?.isModifying || false);
   const resultsRef = useRef(null);
 
   const runSearch = useCallback(
@@ -175,14 +207,20 @@ const Flights = () => {
       };
       searchFlights(req)
         .then((res) => {
-          setFlights(res.data.flights || []);
-          setReturnFlights(res.data.returnFlights || []);
-          setSearchParams(params);
-          setShowHero(false); // Hide full Hero, show compact bar
-          setIsModifying(false); // Hide modify widget if open
+          if (res?.data) {
+            setFlights(res.data.flights || []);
+            setTotalFlights(res.data.pagination?.total || (res.data.flights?.length || 0));
+            setReturnFlights(res.data.returnFlights || []);
+            setSearchParams(params);
+            setShowHero(false);
+            setIsModifying(false);
+          } else {
+            throw new Error("Invalid response from server");
+          }
         })
         .catch((err) => {
-          setError(err.response?.data?.message || "Search failed.");
+          console.error("Flight Search Error:", err);
+          setError(err.response?.data?.message || err.message || "Search failed.");
           setFlights([]);
           setReturnFlights([]);
         })
@@ -201,25 +239,39 @@ const Flights = () => {
   );
 
   useEffect(() => {
-    const { from, to, departureDate, adults, children, infants, travelClass, tripType, segments, isModifying: modifyTrigger } = location.state || {};
-    if (!searchExecuted.current) {
-      if ((from && to) || (tripType === "multi-city" && segments)) {
+    const s = location.state;
+    // Only trigger search if we have state, hasn't executed yet, AND we don't already have flights in state
+    if (s && !searchExecuted.current && (!s.flights || s.flights.length === 0)) {
+      console.log("[Flights] Auto-triggering search from state:", s);
+      const isMulti = s.tripType === "multi-city" || (s.segments && s.segments.length > 0);
+      const hasAnyData = isMulti
+        ? s.segments?.length > 0
+        : s.from && s.to && s.departureDate;
+
+      if (hasAnyData) {
         searchExecuted.current = true;
-        if (modifyTrigger) setIsModifying(true);
-        handleSearch({
-          from,
-          to,
-          departureDate: departureDate || (tripType !== "multi-city" ? new Date().toISOString().split('T')[0] : undefined),
-          adults: adults || 1,
-          children: children || 0,
-          infants: infants || 0,
-          travelClass: travelClass || "economy",
-          tripType: tripType || "one-way",
-          segments: segments
-        });
+        const searchData = isMulti
+          ? { segments: s.segments, adults: s.adults, children: s.children, infants: s.infants, class: s.travelClass, tripType: "multi-city" }
+          : {
+            from: s.from,
+            to: s.to,
+            departureDate: s.departureDate || new Date().toISOString().split('T')[0],
+            returnDate: s.returnDate,
+            adults: s.adults || 1,
+            children: s.children || 0,
+            infants: s.infants || 0,
+            class: s.travelClass || "economy",
+            tripType: s.tripType || "one-way",
+            specialFare: s.specialFare
+          };
+        setSearchParams(searchData);
+        runSearch(searchData, filterParams, sort, order);
       }
+    } else if (s && s.flights && s.flights.length > 0) {
+      // If flights are already in state (e.g. from login redirect), just mark as executed
+      searchExecuted.current = true;
     }
-  }, [location.state, handleSearch]);
+  }, [location.state, runSearch, filterParams, sort, order]);
 
 
   const handleFilterChange = useCallback(
@@ -250,21 +302,37 @@ const Flights = () => {
 
   const handleBook = useCallback(
     (flight, returnFlight) => {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        navigate("/", { state: { from: "flight-booking" } });
-        return;
-      }
-      navigate("/flights/booking", {
-        state: {
+      try {
+        console.log("[Flights] handleBook called", { flightId: flight?._id, hasSearchParams: !!searchParams });
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.log("[Flights] No token, redirecting to login");
+          navigate("/login", {
+            state: {
+              ...searchParams,
+              flights,
+              returnFlights,
+              returnTo: location.pathname
+            }
+          });
+          return;
+        }
+
+        const bookingState = {
           flight,
           returnFlight,
           searchParams,
           tripType: searchParams?.tripType || "one-way",
-        },
-      });
+        };
+
+        console.log("[Flights] Navigating to /flights/booking with state:", bookingState);
+        navigate("/flights/booking", { state: bookingState });
+      } catch (err) {
+        console.error("[Flights] Error in handleBook:", err);
+        setError("Failed to initiate booking. Please try again.");
+      }
     },
-    [navigate, searchParams]
+    [navigate, searchParams, location.pathname]
   );
 
   const handleModifySearch = () => {
@@ -319,6 +387,7 @@ const Flights = () => {
           )}
           <FlightResults
             flights={flights}
+            totalFlights={totalFlights}
             returnFlights={returnFlights}
             searchParams={searchParams}
             filterParams={filterParams}
@@ -355,18 +424,20 @@ const Flights = () => {
               <p className="text-gray-600 text-center mb-10 max-w-2xl mx-auto">
                 Limited-time deals on flights, hotels, and holiday packages.
               </p>
-              {offers.map((offer) => (
-                <OfferCard
-                  key={offer.title}
-                  title={offer.title}
-                  subtitle={offer.subtitle}
-                  discount={offer.discount}
-                  image={offer.image}
-                  ctaText={offer.ctaText}
-                  link={offer.link}
-                  state={offer.state}
-                />
-              ))}
+              <div className="flex flex-col gap-6">
+                {offers.map((offer) => (
+                  <OfferCard
+                    key={offer.title}
+                    title={offer.title}
+                    subtitle={offer.subtitle}
+                    discount={offer.discount}
+                    image={offer.image}
+                    ctaText={offer.ctaText}
+                    link={offer.link}
+                    state={offer.state}
+                  />
+                ))}
+              </div>
             </div>
           </section>
           <WhyChooseUs />

@@ -8,24 +8,24 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [token, setToken] = useState(localStorage.getItem('token'));
+    const [token, setToken] = useState(sessionStorage.getItem('token'));
     const [loading, setLoading] = useState(true);
 
     // Configure axios defaults
     useEffect(() => {
         if (token) {
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            localStorage.setItem('token', token);
+            sessionStorage.setItem('token', token);
         } else {
             delete axios.defaults.headers.common['Authorization'];
-            localStorage.removeItem('token');
+            sessionStorage.removeItem('token');
         }
     }, [token]);
 
     // Load user on mount
     useEffect(() => {
         const loadUser = async () => {
-            const storedToken = localStorage.getItem('token');
+            const storedToken = sessionStorage.getItem('token');
             if (storedToken) {
                 try {
                     const res = await axios.get(`${API}/me`);
@@ -60,7 +60,8 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
             return {
                 success: false,
-                message: error.response?.data?.message || 'Registration failed'
+                message: error.response?.data?.message || 'Registration failed',
+                errors: error.response?.data?.errors
             };
         }
     };
@@ -122,7 +123,8 @@ export const AuthProvider = ({ children }) => {
             }
             return {
                 success: false,
-                message: data?.message || 'Login failed'
+                message: data?.message || 'Login failed',
+                errors: data?.errors
             };
         }
     };
@@ -149,8 +151,8 @@ export const AuthProvider = ({ children }) => {
     const logout = () => {
         setToken(null);
         setUser(null);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
     };
 
     const updateProfile = async (data) => {

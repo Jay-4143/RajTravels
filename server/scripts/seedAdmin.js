@@ -6,22 +6,23 @@ const connectDB = require('../config/db');
 
 const seed = async () => {
     await connectDB();
-    const exists = await User.findOne({ email: 'admin@travelgo.com' });
+    const exists = await User.findOne({ email: 'admin@rajtravel.com' });
+
     if (exists) {
         exists.role = 'admin';
         exists.isEmailVerified = true;
         exists.password = 'admin123';
         await exists.save();
-        console.log('✅ Admin user updated: admin@travelgo.com / admin123');
+        console.log('✅ Admin user updated: admin@rajtravel.com / admin123');
     } else {
         await User.create({
             name: 'Admin',
-            email: 'admin@travelgo.com',
+            email: 'admin@rajtravel.com',
             password: 'admin123',
             role: 'admin',
             isEmailVerified: true
         });
-        console.log('✅ Admin user created: admin@travelgo.com / admin123');
+        console.log('✅ Admin user created: admin@rajtravel.com / admin123');
     }
     process.exit(0);
 };

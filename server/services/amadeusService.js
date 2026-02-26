@@ -45,7 +45,9 @@ exports.searchFlightOffers = async ({
     };
     if (returnDate) query.returnDate = returnDate;
     if (travelClass) query.travelClass = travelClass;
-    if (maxStops !== undefined && maxStops !== null) query.nonStop = maxStops === 0 ? 'true' : 'false';
+    if (maxStops !== undefined && maxStops !== null) {
+        query.nonStop = parseInt(maxStops) === 0 ? 'true' : 'false';
+    }
 
     const response = await amadeus.shopping.flightOffersSearch.get(query);
     return response;

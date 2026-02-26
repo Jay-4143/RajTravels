@@ -50,4 +50,13 @@
     scrollbar-width: none;
     /* Firefox */
   }
+
+  /* Brand Typography */
+  .font-brand {
+    font-family: 'Outfit', sans-serif;
+  }
+
+  .font-tagline {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
 }

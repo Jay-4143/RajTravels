@@ -10,6 +10,7 @@ const OfferCard = ({ title, subtitle, discount, image, ctaText = "Book Now", lin
       <img
         src={image}
         alt=""
+        loading="lazy"
         className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:opacity-80 group-hover:scale-105 transition-all duration-500"
         onError={e => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=600'; }}
       />

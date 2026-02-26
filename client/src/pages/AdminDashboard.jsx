@@ -122,7 +122,7 @@ const AdminDashboard = () => {
             <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-slate-900 text-white flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static lg:flex`}>
                 <div className="flex items-center justify-between px-6 py-5 border-b border-slate-700">
                     <div>
-                        <p className="text-lg font-bold text-white">TravelGO</p>
+                        <p className="text-xl font-brand font-black text-white leading-none">Raj Travel</p>
                         <p className="text-xs text-slate-400">Admin Panel</p>
                     </div>
                     <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white">
@@ -167,7 +167,7 @@ const AdminDashboard = () => {
             {/* Main Content */}
             <main className="flex-1 flex flex-col min-w-0">
                 {/* Topbar */}
-                <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-20">
+                <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-16 z-20">
                     <div className="flex items-center gap-3">
                         <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-gray-600">
                             <HiMenuAlt3 className="w-6 h-6" />

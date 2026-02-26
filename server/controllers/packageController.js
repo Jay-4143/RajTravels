@@ -14,7 +14,7 @@ exports.getPackages = async (req, res, next) => {
   try {
     const {
       type, destination, minPrice, maxPrice,
-      category, featured, hotDeal,
+      category, featured, hotDeal, region, bestMonths,
       sort = 'price', order = 'asc',
       page = 1, limit = 20
     } = req.query;
@@ -23,6 +23,8 @@ exports.getPackages = async (req, res, next) => {
     if (type) query.type = type;
     if (destination) query.destination = new RegExp(destination, 'i');
     if (category) query.category = { $in: [category] };
+    if (region) query.region = new RegExp(region, 'i');
+    if (bestMonths) query.bestMonths = { $in: [bestMonths] };
     if (featured === 'true') query.featured = true;
     if (hotDeal === 'true') query.hotDeal = true;
     if (minPrice || maxPrice) {

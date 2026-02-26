@@ -4,7 +4,7 @@ const reviews = [
   {
     name: "Priya Sharma",
     location: "Mumbai",
-    text: "Smooth booking experience. Got the best deal on my Dubai trip. Will definitely use TravelGO again!",
+    text: "Smooth booking experience. Got the best deal on my Dubai trip. Will definitely use Raj Travel again!",
     rating: 5,
     image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face",
   },
@@ -40,7 +40,7 @@ const Reviews = () => {
           What Our Customers Say
         </h2>
         <p className="text-gray-600 text-center max-w-2xl mx-auto mb-12">
-          Real reviews from travellers who booked with TravelGO.
+          Real reviews from travellers who booked with Raj Travel.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">

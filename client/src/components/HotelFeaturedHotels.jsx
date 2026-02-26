@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getFeaturedHotels } from "../api/hotels";
 
-const HotelFeaturedHotels = ({ onSearch }) => {
+const HotelFeaturedHotels = ({ onSearch, onOpenGallery }) => {
   const navigate = useNavigate();
   const [hotels, setHotels] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,7 +15,7 @@ const HotelFeaturedHotels = ({ onSearch }) => {
   }, []);
 
   const handleView = (hotel) => {
-    navigate(`/hotels/${hotel._id}`);
+    window.open(`/hotels/${hotel._id}`, '_blank');
   };
 
   const handleBook = (hotel) => {
@@ -23,7 +23,9 @@ const HotelFeaturedHotels = ({ onSearch }) => {
       const today = new Date().toISOString().slice(0, 10);
       const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
       onSearch({ city: hotel.city, checkIn: today, checkOut: tomorrow, guests: 2, rooms: 1 });
-    } else navigate(`/hotels/${hotel._id}`);
+    } else {
+      window.open(`/hotels/${hotel._id}`, '_blank');
+    }
   };
 
   if (loading) {
@@ -58,7 +60,10 @@ const HotelFeaturedHotels = ({ onSearch }) => {
                 key={hotel._id}
                 className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow"
               >
-                <div className="h-48 overflow-hidden">
+                <div
+                  className="h-48 overflow-hidden cursor-pointer"
+                  onClick={() => onOpenGallery && onOpenGallery(hotel)}
+                >
                   <img src={img} alt={hotel.name} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
                 </div>
                 <div className="p-4">

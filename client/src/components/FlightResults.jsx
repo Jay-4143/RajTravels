@@ -73,6 +73,18 @@ const FlightCard = ({ flight, tripType, returnFlight, onBook, specialFare, searc
   const [showTaxBreakdown, setShowTaxBreakdown] = useState(false);
   const [showInsuranceBreakdown, setShowInsuranceBreakdown] = useState(false);
 
+  const checkInBaggageStr = [
+    (searchParams?.adults > 0 || !searchParams?.adults) ? `Adult - 15Kg` : null,
+    searchParams?.children > 0 ? `Child - 15Kg` : null,
+    searchParams?.infants > 0 ? `Infant - 0Kg` : null,
+  ].filter(Boolean).join(" ");
+
+  const cabinBaggageStr = [
+    (searchParams?.adults > 0 || !searchParams?.adults) ? `Adult - 7Kg` : null,
+    searchParams?.children > 0 ? `Child - 7Kg` : null,
+    searchParams?.infants > 0 ? `Infant - 7Kg` : null,
+  ].filter(Boolean).join(" ");
+
   return (
     <div className="bg-white border border-gray-200 rounded-xl hover:shadow-xl transition-all duration-300 overflow-hidden group">
       <div className="flex items-stretch relative">
@@ -91,9 +103,10 @@ const FlightCard = ({ flight, tripType, returnFlight, onBook, specialFare, searc
             </div>
 
             {/* Departure */}
-            <div className="text-center">
+            <div className="text-center min-w-[80px]">
               <p className="text-2xl font-bold text-slate-900 tracking-tighter">{formatTime(flight.departureTime)}</p>
-              <p className="text-[10px] font-semibold text-slate-400 uppercase mt-0.5">{flight.from}</p>
+              <p className="text-[10px] font-bold text-slate-900 uppercase mt-0.5">{flight.fromCity || flight.from}</p>
+              <p className="text-[9px] font-semibold text-slate-400 uppercase leading-none mt-0.5">[{flight.from}]</p>
             </div>
 
             {/* Duration & stops */}
@@ -102,31 +115,33 @@ const FlightCard = ({ flight, tripType, returnFlight, onBook, specialFare, searc
                 <span className="text-[10px] font-semibold text-slate-400 mb-2">{formatDuration(flight.duration)}</span>
                 <div className="w-full flex items-center gap-2">
                   <div className="h-[2px] bg-slate-100 flex-1 rounded-full" />
-                  <FaPlane className="w-3.5 h-3.5 text-slate-300 transform -rotate-45" />
+                  <FaPlane className="w-3.5 h-3.5 text-slate-300" />
                   <div className="h-[2px] bg-slate-100 flex-1 rounded-full" />
                 </div>
-                <span className="text-[10px] font-bold text-slate-500 uppercase mt-2 tracking-widest">
-                  {flight.stops === 0 ? "Non Stop" : `${flight.stops} stop(s)`}
+                <span className="text-[10px] font-bold text-slate-500 uppercase mt-2 tracking-tight">
+                  {flight.stops === 0 ? "Non Stop" : `${flight.stops} Stop${flight.stops > 1 ? 's' : ''}${flight.viaCities?.length > 0 ? `, Via ${flight.viaCities.join(', ')}` : ''}`}
                 </span>
-                {flight.stops > 0 && <div className="absolute top-1/2 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-red-400 rounded-full border-2 border-white shadow-sm mt-1" />}
+                {flight.stops > 0 && <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[1px] w-1.5 h-1.5 bg-blue-500 rounded-full border-2 border-white shadow-sm mt-2" />}
               </div>
             </div>
 
             {/* Arrival */}
-            <div className="text-center">
+            <div className="text-center min-w-[80px]">
               <p className="text-2xl font-bold text-slate-900 tracking-tighter">{formatTime(flight.arrivalTime)}</p>
-              <p className="text-[10px] font-semibold text-slate-400 uppercase mt-0.5">{flight.to}</p>
+              <p className="text-[10px] font-bold text-slate-900 uppercase mt-0.5">{flight.toCity || flight.to}</p>
+              <p className="text-[9px] font-semibold text-slate-400 uppercase leading-none mt-0.5">[{flight.to}]</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-6 mt-5 pt-5 border-t border-slate-50">
+          {/* Restore Compact Inclusions Row */}
+          <div className="flex items-center gap-6 mt-4 pt-4 border-t border-slate-50">
             <span className="flex items-center gap-2 text-[10px] font-semibold text-slate-400 uppercase tracking-tighter">
               <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
               Meal, Seat are chargeable (More)
             </span>
             <span className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500 uppercase">
               <FaSuitcaseRolling className="w-3 h-3 text-slate-300" />
-              {baggage}
+              {flight.baggage?.checkIn || '15kg'} (Check-in) | {flight.baggage?.cabin || '7kg'} (Cabin)
             </span>
             <span className="text-[10px] font-bold text-red-500 uppercase ml-auto">{flight.seatsAvailable || 9} Left</span>
           </div>
@@ -157,9 +172,9 @@ const FlightCard = ({ flight, tripType, returnFlight, onBook, specialFare, searc
           <button
             type="button"
             onClick={() => onBook(flight, tripType === "round-trip" ? returnFlight : null)}
-            className="w-full py-2.5 bg-red-500 hover:bg-red-600 text-white text-xs font-bold uppercase tracking-widest rounded-lg transition-all shadow-lg hover:shadow-red-200 active:scale-95"
+            className="w-full py-2.5 bg-[#FF4D42] hover:bg-[#E63930] text-white text-xs font-bold uppercase tracking-widest rounded-lg transition-all shadow-lg hover:shadow-red-200 active:scale-95"
           >
-            Book Now
+            View Fare
           </button>
           <button
             onClick={() => setIsExpanded(!isExpanded)}
@@ -199,47 +214,203 @@ const FlightCard = ({ flight, tripType, returnFlight, onBook, specialFare, searc
           <div className="p-8 bg-white">
             {activeTab === 'info' && (
               <div className="space-y-6">
-                <div className="flex items-center gap-4 text-sm font-bold text-slate-800 uppercase tracking-widest pb-4 border-b border-slate-100">
-                  {flight.from} <span className="text-slate-300">→</span> {flight.to}, {new Date(flight.departureDate || (searchParams?.departureDate) || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
-                </div>
-                <div className="flex gap-12">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-4 mb-6">
-                      <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-red-500 font-bold">
-                        {flight.airlineCode || "AI"}
-                      </div>
-                      <div>
-                        <p className="text-sm font-black text-slate-800 uppercase leading-none">{flight.airline} {flight.flightNumber || "IX-1232"}</p>
-                        <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Aircraft: Boeing 737Max | Economy</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-8 items-start relative before:absolute before:left-[17px] before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-100 before:rounded-full">
-                      <div className="w-9 space-y-20 z-10 flex flex-col items-center">
-                        <div className="w-8 h-8 rounded-full bg-white border-4 border-red-500 shadow-sm" />
-                        <div className="w-8 h-8 rounded-full bg-white border-4 border-blue-500 shadow-sm" />
-                      </div>
-                      <div className="flex-1 space-y-16 py-1">
-                        <div>
-                          <p className="text-xl font-black text-slate-800 tracking-tighter">{formatTime(flight.departureTime)}</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">{new Date(flight.departureDate || (searchParams?.departureDate) || Date.now()).toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: '2-digit' })} • {flight.fromCity || flight.from || searchParams?.fromCity} [{flight.fromCode || flight.from}]</p>
-                          <p className="text-[10px] font-bold text-slate-500 mt-0.5">{flight.fromAirport || `${searchParams?.fromCode || flight.fromCode || flight.from} International Airport`} | Terminal 2</p>
-                        </div>
-                        <div className="relative before:absolute before:-top-8 before:-left-[54px] before:w-12 before:h-[2px] before:bg-slate-100">
-                          <p className="text-xl font-black text-slate-800 tracking-tighter">{formatTime(flight.arrivalTime)}</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">
-                            {new Date(flight.arrivalTime || flight.departureTime || Date.now()).toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: '2-digit' })} • {flight.toCity || flight.to || searchParams?.toCity} [{flight.toCode || flight.to}]
-                          </p>
-                          <p className="text-[10px] font-bold text-slate-500 mt-0.5">{flight.toAirport || `${searchParams?.toCode || flight.toCode || flight.to} International Airport`} | Terminal 1</p>
-                        </div>
-                      </div>
-                      <div className="w-48 text-center pt-8">
-                        <div className="w-full h-[1px] bg-slate-100 mb-2" />
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{formatDuration(flight.duration)}</p>
-                        <div className="w-full h-[1px] bg-slate-100 mt-2" />
-                      </div>
-                    </div>
+                {/* Outbound Journey */}
+                <div className="flex items-center justify-between text-xs font-black text-slate-800 uppercase tracking-widest pb-4 border-b border-slate-100">
+                  <div className="flex items-center gap-4">
+                    <div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm" />
+                    <span>Onward Journey: {flight.fromCity} [{flight.from}] <span className="text-slate-300 mx-2">→</span> {flight.toCity} [{flight.to}]</span>
                   </div>
+                  <span className="text-slate-400">{new Date(flight.departureDate || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                 </div>
+
+                {(flight.segments && flight.segments.length > 0 ? flight.segments : [flight]).map((seg, idx) => (
+                  <div key={`out-${idx}`} className="space-y-4">
+                    {/* Segment Block */}
+                    <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+                      <div className="p-6">
+                        <div className="flex flex-wrap items-center gap-6 mb-8">
+                          {/* Airline Info - Matching Image 2 */}
+                          <div className="flex items-center gap-4 pr-6 border-r border-slate-100">
+                            <div className="w-8 h-8 bg-red-600 rounded-md flex items-center justify-center text-white font-bold text-[10px] uppercase overflow-hidden shadow-sm">
+                              {seg.airlineCode || '✈'}
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-[15px] font-bold text-slate-800 tracking-tight">{seg.airline}</span>
+                              <span className="text-slate-300 text-lg font-light">|</span>
+                              <span className="text-[12px] font-medium text-slate-400">{seg.flightNumber}</span>
+                            </div>
+                          </div>
+
+                          {/* Premium Baggage & Aircraft Bar (Single Row) - Precisely matching Image 2 */}
+                          <div className="flex items-center bg-[#F8FAFC] rounded-lg border border-slate-100 px-1 py-1.5 gap-0 divide-x-2 divide-blue-400">
+                            <div className="px-6 py-0.5">
+                              <p className="text-[11px] font-bold text-slate-800 leading-tight">Aircraft</p>
+                              <p className="text-[10px] text-slate-500 font-medium uppercase mt-0.5">{seg.aircraft || 'BOEING'}</p>
+                            </div>
+                            <div className="px-6 py-0.5">
+                              <p className="text-[11px] font-bold text-slate-800 leading-tight">Travel Class</p>
+                              <p className="text-[10px] text-slate-500 font-medium uppercase mt-0.5">{searchParams?.travelClass || 'Economy'}</p>
+                            </div>
+                            <div className="px-6 py-0.5">
+                              <p className="text-[11px] font-bold text-slate-800 leading-tight">Check-In Baggage</p>
+                              <p className="text-[10px] text-slate-500 font-medium mt-0.5">{checkInBaggageStr}</p>
+                            </div>
+                            <div className="px-6 py-0.5">
+                              <p className="text-[11px] font-bold text-slate-800 leading-tight">Cabin Baggage</p>
+                              <p className="text-[10px] text-slate-500 font-medium mt-0.5">{cabinBaggageStr}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-10">
+                          <div className="flex-1 w-full text-center md:text-left">
+                            <p className="text-3xl font-black text-slate-900 tracking-tighter">{formatTime(seg.departureTime)}</p>
+                            <p className="text-[11px] font-bold text-slate-500 mt-1.5 uppercase tracking-tight">{new Date(seg.departureTime).toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                            <div className="mt-4">
+                              <p className="text-sm font-black text-slate-800 uppercase tracking-tighter">{seg.fromCity} [{seg.from}]</p>
+                              <p className="text-[10px] font-bold text-slate-400 mt-0.5 leading-tight">{seg.fromAirport}</p>
+                              <p className="text-[10px] font-black text-slate-400 mt-1 uppercase tracking-[0.2em]">Terminal {seg.terminal || '1'}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex-[0.5] flex flex-col items-center min-w-[120px]">
+                            <span className="text-[10px] font-black text-slate-300 mb-2 uppercase tracking-[0.25em]">{seg.duration}</span>
+                            <div className="w-full relative flex items-center justify-center">
+                              <div className="absolute inset-x-0 h-px bg-slate-100 border-t border-dashed border-slate-300" />
+                              <div className="relative z-10 bg-white px-3">
+                                <FaPlane className="text-blue-500 w-5 h-5" />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex-1 w-full text-center md:text-right">
+                            <p className="text-3xl font-black text-slate-900 tracking-tighter">{formatTime(seg.arrivalTime)}</p>
+                            <p className="text-[11px] font-bold text-slate-500 mt-1.5 uppercase tracking-tight">{new Date(seg.arrivalTime).toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                            <div className="mt-4">
+                              <p className="text-sm font-black text-slate-800 uppercase tracking-tighter">{seg.toCity} [{seg.to}]</p>
+                              <p className="text-[10px] font-bold text-slate-400 mt-0.5 leading-tight">{seg.toAirport}</p>
+                              <p className="text-[10px] font-black text-slate-400 mt-1 uppercase tracking-[0.2em]">Terminal {seg.arrivalTerminal || '1D'}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Layover connecting bar */}
+                    {seg.layoverDuration && (
+                      <div className="bg-gradient-to-r from-blue-50/30 via-blue-50 to-blue-50/30 border-y border-blue-100/50 py-3.5 px-8 flex items-center gap-4 relative mx-4 rounded-xl">
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-400 rounded-r-full shadow-sm" />
+                        <div className="w-8 h-8 rounded-full bg-white border border-blue-200 flex items-center justify-center text-blue-500 shadow-sm">
+                          <FaPlane className="w-4 h-4" />
+                        </div>
+                        <p className="text-[10px] font-black text-blue-800 uppercase tracking-[0.1em]">
+                          Change planes at <span className="text-blue-600 underline decoration-2 underline-offset-4">{seg.toCity} | {seg.toAirport} ({seg.to})</span>, Connecting Time: <span className="text-red-500">{seg.layoverDuration}</span>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {/* Return Journey */}
+                {tripType === "round-trip" && returnFlight && (
+                  <>
+                    <div className="flex items-center justify-between text-xs font-black text-slate-800 uppercase tracking-widest pb-4 border-b border-slate-100 pt-8 mt-8 border-t">
+                      <div className="flex items-center gap-4">
+                        <div className="w-2 h-2 rounded-full bg-red-500 shadow-sm" />
+                        <span>Return Journey: {returnFlight.fromCity || returnFlight.from} <span className="text-slate-300 mx-2">→</span> {returnFlight.toCity || returnFlight.to}</span>
+                      </div>
+                      <span className="text-slate-400">{new Date(returnFlight.departureTime || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                    </div>
+
+                    {(returnFlight.segments && returnFlight.segments.length > 0 ? returnFlight.segments : [returnFlight]).map((seg, idx) => (
+                      <div key={`ret-${idx}`} className="space-y-4">
+                        {/* Segment Block */}
+                        <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+                          <div className="p-6">
+                            <div className="flex flex-wrap items-center gap-6 mb-8">
+                              {/* Airline Info - Matching Image 2 */}
+                              <div className="flex items-center gap-4 pr-6 border-r border-slate-100">
+                                <div className="w-8 h-8 bg-red-600 rounded-md flex items-center justify-center text-white font-bold text-[10px] uppercase overflow-hidden shadow-sm">
+                                  {seg.airlineCode || '✈'}
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <span className="text-[15px] font-bold text-slate-800 tracking-tight">{seg.airline}</span>
+                                  <span className="text-slate-300 text-lg font-light">|</span>
+                                  <span className="text-[12px] font-medium text-slate-400">{seg.flightNumber}</span>
+                                </div>
+                              </div>
+
+                              {/* Premium Baggage & Aircraft Bar (Single Row) - Precisely matching Image 2 */}
+                              <div className="flex items-center bg-[#F8FAFC] rounded-lg border border-slate-100 px-1 py-1.5 gap-0 divide-x-2 divide-blue-400">
+                                <div className="px-6 py-0.5">
+                                  <p className="text-[11px] font-bold text-slate-800 leading-tight">Aircraft</p>
+                                  <p className="text-[10px] text-slate-500 font-medium uppercase mt-0.5">{seg.aircraft || 'BOEING'}</p>
+                                </div>
+                                <div className="px-6 py-0.5">
+                                  <p className="text-[11px] font-bold text-slate-800 leading-tight">Travel Class</p>
+                                  <p className="text-[10px] text-slate-500 font-medium uppercase mt-0.5">{searchParams?.travelClass || 'Economy'}</p>
+                                </div>
+                                <div className="px-6 py-0.5">
+                                  <p className="text-[11px] font-bold text-slate-800 leading-tight">Check-In Baggage</p>
+                                  <p className="text-[10px] text-slate-500 font-medium mt-0.5">{checkInBaggageStr}</p>
+                                </div>
+                                <div className="px-6 py-0.5">
+                                  <p className="text-[11px] font-bold text-slate-800 leading-tight">Cabin Baggage</p>
+                                  <p className="text-[10px] text-slate-500 font-medium mt-0.5">{cabinBaggageStr}</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col md:flex-row items-center justify-between gap-10">
+                              <div className="flex-1 w-full text-center md:text-left">
+                                <p className="text-3xl font-black text-slate-900 tracking-tighter">{formatTime(seg.departureTime)}</p>
+                                <p className="text-[11px] font-bold text-slate-500 mt-1.5 uppercase tracking-tight">{new Date(seg.departureTime).toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                                <div className="mt-4">
+                                  <p className="text-sm font-black text-slate-800 uppercase tracking-tighter">{seg.fromCity || seg.from} [{seg.from}]</p>
+                                  <p className="text-[10px] font-bold text-slate-400 mt-0.5 leading-tight">{seg.fromAirport}</p>
+                                  <p className="text-[10px] font-black text-slate-400 mt-1 uppercase tracking-[0.2em]">Terminal {seg.terminal || '1'}</p>
+                                </div>
+                              </div>
+
+                              <div className="flex-[0.5] flex flex-col items-center min-w-[120px]">
+                                <span className="text-[10px] font-black text-slate-300 mb-2 uppercase tracking-[0.25em]">{seg.duration}</span>
+                                <div className="w-full relative flex items-center justify-center">
+                                  <div className="absolute inset-x-0 h-px bg-slate-100 border-t border-dashed border-slate-300" />
+                                  <div className="relative z-10 bg-white px-3">
+                                    <FaPlane className="text-blue-500 w-5 h-5" />
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex-1 w-full text-center md:text-right">
+                                <p className="text-3xl font-black text-slate-900 tracking-tighter">{formatTime(seg.arrivalTime)}</p>
+                                <p className="text-[11px] font-bold text-slate-500 mt-1.5 uppercase tracking-tight">{new Date(seg.arrivalTime).toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                                <div className="mt-4">
+                                  <p className="text-sm font-black text-slate-800 uppercase tracking-tighter">{seg.toCity || seg.to} [{seg.to}]</p>
+                                  <p className="text-[10px] font-bold text-slate-400 mt-0.5 leading-tight">{seg.toAirport}</p>
+                                  <p className="text-[10px] font-black text-slate-400 mt-1 uppercase tracking-[0.2em]">Terminal {seg.arrivalTerminal || '1D'}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Layover connecting bar */}
+                        {seg.layoverDuration && (
+                          <div className="bg-gradient-to-r from-blue-50/30 via-blue-50 to-blue-50/30 border-y border-blue-100/50 py-3.5 px-8 flex items-center gap-4 relative mx-4 rounded-xl">
+                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-400 rounded-r-full shadow-sm" />
+                            <div className="w-8 h-8 rounded-full bg-white border border-blue-200 flex items-center justify-center text-blue-500 shadow-sm">
+                              <FaPlane className="w-4 h-4" />
+                            </div>
+                            <p className="text-[10px] font-black text-blue-800 uppercase tracking-[0.1em]">
+                              Change planes at <span className="text-blue-600 underline decoration-2 underline-offset-4">{seg.toCity} | {seg.toAirport} ({seg.to})</span>, Connecting Time: <span className="text-red-500">{seg.layoverDuration}</span>
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             )}
             {activeTab === 'fare' && (
@@ -616,6 +787,7 @@ const TIME_BLOCKS = [
 /* ──────────── MAIN FLIGHT RESULTS ──────────── */
 const FlightResults = ({
   flights = [],
+  totalFlights = 0,
   returnFlights = [],
   searchParams,
   filterParams,
@@ -659,6 +831,23 @@ const FlightResults = ({
 
   const tripType = searchParams?.tripType || "one-way";
 
+  // Wrap main results in useMemo for performance
+  const sortedFlights = useMemo(() => {
+    let result = [...flights];
+    if (activeSort === "cheapest") {
+      result.sort((a, b) => a.price - b.price);
+    } else if (activeSort === "fastest") {
+      result.sort((a, b) => {
+        const getMin = (d) => {
+          const m = d.match(/(\d+)h/i);
+          const min = d.match(/(\d+)m/i);
+          return (m ? parseInt(m[1]) * 60 : 0) + (min ? parseInt(min[1]) : 0);
+        };
+        return getMin(a.duration) - getMin(b.duration);
+      });
+    }
+    return result;
+  }, [flights, activeSort]);
   const handleSortTab = (key) => {
     setActiveSort(key);
     if (key === "cheapest") onSortChange("price", "asc");
@@ -667,10 +856,16 @@ const FlightResults = ({
     else onSortChange("price", "asc");
   };
 
-  const cheapestPrice = useMemo(() => {
-    if (!flights.length) return Infinity;
-    return Math.min(...flights.map(f => f.price));
+  const { minPriceResults, maxPriceResults } = useMemo(() => {
+    if (!flights.length) return { minPriceResults: 5150, maxPriceResults: 30000 };
+    const prices = flights.map(f => f.price);
+    return {
+      minPriceResults: Math.min(...prices),
+      maxPriceResults: Math.max(...prices)
+    };
   }, [flights]);
+
+  const cheapestPrice = minPriceResults;
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -690,8 +885,8 @@ const FlightResults = ({
           </button>
         ))}
         <div className="ml-auto text-sm text-gray-500">
-          Showing <span className="font-semibold text-gray-800">{flights.length}</span> of{" "}
-          <span className="font-semibold text-gray-800">{flights.length}</span> flights found
+          Showing <span className="font-semibold text-gray-800">{sortedFlights.length}</span> of{" "}
+          <span className="font-semibold text-gray-800">{totalFlights}</span> flights found
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">Sort By</span>
@@ -776,15 +971,15 @@ const FlightResults = ({
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Price Range</h4>
-                  <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest">₹{filterParams.maxPrice?.toLocaleString('en-IN') || "23,150"}</span>
+                  <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest">₹{(filterParams.maxPrice || maxPriceResults).toLocaleString('en-IN')}</span>
                 </div>
                 <div className="px-2">
                   <input
                     type="range"
-                    min="5150"
-                    max="30000"
+                    min={minPriceResults}
+                    max={maxPriceResults}
                     step="100"
-                    value={filterParams.maxPrice || 23150}
+                    value={filterParams.maxPrice || maxPriceResults}
                     onChange={(e) =>
                       onFilterChange({
                         maxPrice: Number(e.target.value),
@@ -793,8 +988,8 @@ const FlightResults = ({
                     className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-red-500"
                   />
                   <div className="flex justify-between mt-2 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                    <span>₹5,150</span>
-                    <span>₹30,000</span>
+                    <span>₹{minPriceResults.toLocaleString('en-IN')}</span>
+                    <span>₹{maxPriceResults.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
               </div>
@@ -951,7 +1146,7 @@ const FlightResults = ({
           <DateStrip
             activeDate={searchParams?.departureDate}
             onDateSelect={(d) => onFilterChange(d)}
-            flightsCount={flights.length}
+            flightsCount={sortedFlights.length}
             cheapestPrice={cheapestPrice}
             loading={loading}
           />
@@ -959,7 +1154,7 @@ const FlightResults = ({
           <div className="bg-cyan-50/50 border border-cyan-100 rounded-xl p-5 flex items-center justify-between mb-6 group">
             <div className="flex items-center gap-5">
               <div className="w-12 h-12 rounded-full bg-cyan-500 flex items-center justify-center text-white shadow-lg shadow-cyan-100 group-hover:scale-110 transition-transform">
-                <FaPlane className="w-6 h-6 -rotate-45" />
+                <FaPlane className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-[11px] font-bold text-slate-800 uppercase tracking-tight">Search result includes airports near {searchParams?.fromCity || "Your Origin"} [{searchParams?.fromCode || "ORIGIN"}]</p>
@@ -974,7 +1169,7 @@ const FlightResults = ({
               <HiOutlineRefresh className="w-10 h-10 text-blue-500 animate-spin mb-3" />
               <p className="text-gray-500 text-sm">Searching for the best flights...</p>
             </div>
-          ) : flights.length === 0 ? (
+          ) : sortedFlights.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
               <FaPlane className="w-12 h-12 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500">No flights found. Try different dates or filters.</p>
@@ -982,7 +1177,7 @@ const FlightResults = ({
           ) : (
             <div className="space-y-3">
               {tripType === "round-trip" && returnFlights?.length > 0
-                ? flights.map((f, i) => (
+                ? sortedFlights.map((f, i) => (
                   <FlightCard
                     key={f._id + (returnFlights[i]?._id || i)}
                     flight={f}
@@ -993,7 +1188,7 @@ const FlightResults = ({
                     searchParams={searchParams}
                   />
                 ))
-                : flights.map((flight) => (
+                : sortedFlights.map((flight) => (
                   <FlightCard
                     key={flight._id}
                     flight={flight}

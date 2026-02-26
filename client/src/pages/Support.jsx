@@ -44,7 +44,7 @@ const Support = () => {
                         {[
                             "How do I cancel my booking?",
                             "When will I receive my refund?",
-                            "How to use TravelGO Wallet points?",
+                            "How to use Raj Travel Wallet points?",
                             "Can I change my passenger details after booking?"
                         ].map((q, i) => (
                             <div key={i} className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex items-center justify-between cursor-pointer hover:border-blue-200">
@@ -69,7 +69,7 @@ const Support = () => {
                                 <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center"><FaEnvelope /></div>
                                 <div>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email Support</p>
-                                    <p className="text-sm font-black">support@travelgo.com</p>
+                                    <p className="text-sm font-black">support@rajtravel.com</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-4">

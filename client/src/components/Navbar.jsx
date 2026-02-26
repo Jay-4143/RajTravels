@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { HiMenuAlt3, HiX, HiChevronDown } from "react-icons/hi";
 import { FaPlane, FaHotel, FaBriefcase, FaUmbrellaBeach, FaBus, FaShip, FaCar, FaUser, FaUserShield, FaSuitcase, FaTicketAlt, FaWallet, FaTimesCircle, FaUsers, FaRupeeSign, FaEdit, FaSignOutAlt, FaThLarge, FaHeadset } from "react-icons/fa";
@@ -27,18 +27,26 @@ const Navbar = () => {
   const { currency, setCurrency } = useGlobal();
   const isFlights = location.pathname === "/" || location.pathname === "/flights";
 
+  // Auto-open modal on /login or /register routes
+  useEffect(() => {
+    if ((location.pathname === "/login" || location.pathname === "/register") && !user) {
+      setLoginModalOpen(true);
+    }
+  }, [location.pathname, user]);
+
   return (
     <>
-      <nav className="sticky top-0 z-[200] bg-white shadow-sm border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+      <nav className="sticky top-0 z-[10000] bg-white shadow-sm border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="flex items-center justify-between h-16 relative">
             {/* Logo */}
             <Link
               to="/"
               onClick={() => { if (window.location.pathname === '/' || window.location.pathname === '/flights') window.location.reload(); }}
-              className="flex-shrink-0 text-xl font-bold text-blue-600 hover:text-blue-700 transition-colors"
+              className="flex-shrink-0 flex flex-col items-start group"
             >
-              TravelGO
+              <span className="text-2xl font-brand font-black text-blue-600 leading-none">Raj Travel</span>
+              <span className="text-[9px] font-tagline font-bold text-gray-400 uppercase tracking-widest mt-1 group-hover:text-blue-500 transition-colors">Your Trusted Journey Partner</span>
             </Link>
 
             {/* Center nav - desktop */}
@@ -78,8 +86,8 @@ const Navbar = () => {
                 </button>
                 {currencyOpen && (
                   <>
-                    <div className="fixed inset-0 z-10" onClick={() => setCurrencyOpen(false)} aria-hidden="true" />
-                    <div className="absolute right-0 mt-2 w-56 py-2 bg-white border border-gray-100 rounded-xl shadow-2xl z-20 max-h-[400px] overflow-y-auto">
+                    <div className="fixed inset-0 z-[100]" onClick={() => setCurrencyOpen(false)} aria-hidden="true" />
+                    <div className="absolute right-0 top-full mt-2 w-56 py-2 bg-white border border-gray-100 rounded-xl shadow-2xl z-[110] max-h-[400px] overflow-y-auto animate-fadeIn origin-top-right">
                       <div className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Select Currency</div>
                       {currencies.map((curr) => (
                         <button
@@ -109,21 +117,21 @@ const Navbar = () => {
                     className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
                   >
                     <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs">
-                      {user.name.charAt(0).toUpperCase()}
+                      {user?.name?.charAt(0).toUpperCase() || "U"}
                     </div>
-                    <span>{user.name}</span>
+                    <span>{user?.name || "Member"}</span>
                     <HiChevronDown className="w-4 h-4 text-gray-500" />
                   </button>
                   {profileOpen && (
                     <>
-                      <div className="fixed inset-0 z-10" onClick={() => setProfileOpen(false)} aria-hidden="true" />
-                      <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-100 rounded-xl shadow-2xl z-20 overflow-hidden">
+                      <div className="fixed inset-0 z-[200]" onClick={() => setProfileOpen(false)} aria-hidden="true" />
+                      <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-gray-100 rounded-xl shadow-2xl z-[10010] animate-fadeIn origin-top-right">
                         <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-                            {user.name.charAt(0).toUpperCase()}
+                          <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+                            {user?.name?.charAt(0).toUpperCase() || "U"}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-black text-slate-800 truncate uppercase tracking-tighter">{user.email}</p>
+                            <p className="text-sm font-black text-slate-800 truncate uppercase tracking-tighter">{user?.email || "No Email Provided"}</p>
                           </div>
                         </div>
                         <div className="py-1">

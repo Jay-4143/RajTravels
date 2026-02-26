@@ -37,11 +37,12 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <Link to="/" className="text-2xl font-bold text-white">
-              TravelGO
+            <Link to="/" className="flex flex-col items-start gap-1 group mb-6">
+              <span className="text-2xl font-brand font-black text-white leading-none">Raj Travel</span>
+              <span className="text-[10px] font-tagline font-bold text-slate-500 uppercase tracking-widest group-hover:text-blue-400 transition-colors">Your Trusted Journey Partner</span>
             </Link>
-            <p className="mt-3 text-slate-400 text-sm max-w-xs">
-              Book flights, hotels, and holiday packages at the best prices. Your trusted travel partner.
+            <p className="mt-4 text-slate-400 text-sm max-w-xs leading-relaxed">
+              Book flights, hotels, and holiday packages at the best prices. Experience seamless travel planning with us.
             </p>
             <div className="flex gap-3 mt-4">
               {socialIcons.map(({ Icon, href, label }) => (
@@ -101,7 +102,7 @@ const Footer = () => {
         </div>
 
         <div className="mt-10 pt-8 border-t border-slate-700 text-center text-slate-500 text-sm">
-          © {new Date().getFullYear()} TravelGO. All rights reserved.
+          © {new Date().getFullYear()} Raj Travel. All rights reserved.
         </div>
       </div>
     </footer>

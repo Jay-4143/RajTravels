@@ -1,43 +1,45 @@
 import { BrowserRouter as Router, Routes, Route, useParams, Link, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import Navbar from './components/Navbar';
 import ScrollToTop from './components/ScrollToTop';
-import Flights from './pages/Flights';
-import FlightBooking from './pages/FlightBooking';
-import Hotels from './pages/Hotels';
-import HotelDetail from './pages/HotelDetail';
-import HotelBooking from './pages/HotelBooking';
-
-import VisaPage from './pages/VisaPage';
-import VisaDetails from './pages/VisaDetails';
-import VisaApplication from './pages/VisaApplication';
-import Holidays from './pages/Holidays';
-import Buses from './pages/Buses';
-import BusBooking from './pages/BusBooking';
-import PackageDetails from './pages/PackageDetails';
-import Cruises from './pages/Cruises';
-import CruiseDetail from './pages/CruiseDetail';
-import CruiseBooking from './pages/CruiseBooking';
-import Cabs from './pages/Cabs';
-import CabBooking from './pages/CabBooking';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import ProfilePage from './pages/ProfilePage';
-import ProtectedRoute from './components/ProtectedRoute';
-import Services from './pages/Services';
-import AdminDashboard from './pages/AdminDashboard';
-import MyBookings from './pages/MyBookings';
-import UserDashboard from './pages/UserDashboard';
-import Payment from './pages/Payment';
-import UpcomingTrips from './pages/UpcomingTrips';
-import Cancellations from './pages/Cancellations';
-import Wallet from './pages/Wallet';
-import Travellers from './pages/Travellers';
-import Support from './pages/Support';
+import Loading from './components/Loading';
 import { AuthProvider } from './context/AuthContext';
 import { GlobalProvider } from './context/GlobalContext';
 import Footer from './components/Footer';
 import { Toaster } from 'react-hot-toast';
+
+// Lazy load pages
+const Flights = lazy(() => import('./pages/Flights'));
+const FlightBooking = lazy(() => import('./pages/FlightBooking'));
+const Hotels = lazy(() => import('./pages/Hotels'));
+const HotelDetail = lazy(() => import('./pages/HotelDetail'));
+const HotelBooking = lazy(() => import('./pages/HotelBooking'));
+const VisaPage = lazy(() => import('./pages/VisaPage'));
+const VisaDetails = lazy(() => import('./pages/VisaDetails'));
+const VisaApplication = lazy(() => import('./pages/VisaApplication'));
+const Holidays = lazy(() => import('./pages/Holidays'));
+const Buses = lazy(() => import('./pages/Buses'));
+const BusBooking = lazy(() => import('./pages/BusBooking'));
+const PackageDetails = lazy(() => import('./pages/PackageDetails'));
+const Cruises = lazy(() => import('./pages/Cruises'));
+const CruiseDetail = lazy(() => import('./pages/CruiseDetail'));
+const CruiseBooking = lazy(() => import('./pages/CruiseBooking'));
+const Cabs = lazy(() => import('./pages/Cabs'));
+const CabBooking = lazy(() => import('./pages/CabBooking'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const Services = lazy(() => import('./pages/Services'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const MyBookings = lazy(() => import('./pages/MyBookings'));
+const UserDashboard = lazy(() => import('./pages/UserDashboard'));
+const Payment = lazy(() => import('./pages/Payment'));
+const UpcomingTrips = lazy(() => import('./pages/UpcomingTrips'));
+const Cancellations = lazy(() => import('./pages/Cancellations'));
+const Wallet = lazy(() => import('./pages/Wallet'));
+const Travellers = lazy(() => import('./pages/Travellers'));
+const Support = lazy(() => import('./pages/Support'));
+const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'));
 
 const LocationLogger = () => {
   const location = useLocation();
@@ -72,89 +74,98 @@ function App() {
   return (
     <AuthProvider>
       <GlobalProvider>
-        <Toaster position="top-right" toastOptions={{ duration: 3000, style: { borderRadius: '10px', fontFamily: 'sans-serif' } }} />
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 3000,
+            style: { borderRadius: '10px', fontFamily: 'sans-serif' }
+          }}
+          containerStyle={{ zIndex: 99999 }}
+        />
         <Router>
           <ScrollToTop />
           <Navbar />
           <LocationLogger />
-          <Routes>
-            <Route path="/" element={<Flights />} />
-            <Route path="/flights" element={<Flights />} />
-            <Route path="/flights/booking" element={<FlightBooking />} />
-            <Route path="/hotels" element={<Hotels />} />
-            <Route path="/hotels/booking" element={<HotelBooking />} />
-            <Route path="/hotels/:id" element={<HotelDetail />} />
-            <Route path="/visa" element={<VisaPage />} />
-            <Route path="/visa/:id" element={<VisaDetails />} />
-            <Route path="/visa/:id/apply" element={<VisaApplication />} />
-            <Route path="/holidays" element={<Holidays />} />
-            <Route path="/buses" element={<Buses />} />
-            <Route path="/buses/:id/book" element={<BusBooking />} />
-            <Route path="/packages/:id" element={<PackageDetails />} />
-            <Route path="/services" element={<Services />} />
-            <Route path="/services/:slug" element={<Services />} />
-            <Route path="/login" element={<Flights />} />
-            <Route path="/register" element={<Flights />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/cruise" element={<Cruises />} />
-            <Route path="/cruise/:id" element={<CruiseDetail />} />
-            <Route path="/cruise/booking" element={<CruiseBooking />} />
-            <Route path="/cabs" element={<Cabs />} />
-            <Route path="/cabs/booking" element={<CabBooking />} />
+          <Suspense fallback={<Loading />}>
+            <Routes>
+              <Route path="/" element={<Flights />} />
+              <Route path="/flights" element={<Flights />} />
+              <Route path="/flights/booking" element={<FlightBooking />} />
+              <Route path="/hotels" element={<Hotels />} />
+              <Route path="/hotels/booking" element={<HotelBooking />} />
+              <Route path="/hotels/:id" element={<HotelDetail />} />
+              <Route path="/visa" element={<VisaPage />} />
+              <Route path="/visa/:id" element={<VisaDetails />} />
+              <Route path="/visa/:id/apply" element={<VisaApplication />} />
+              <Route path="/holidays" element={<Holidays />} />
+              <Route path="/buses" element={<Buses />} />
+              <Route path="/buses/:id/book" element={<BusBooking />} />
+              <Route path="/packages/:id" element={<PackageDetails />} />
+              <Route path="/services" element={<Services />} />
+              <Route path="/services/:slug" element={<Services />} />
+              <Route path="/login" element={<Flights />} />
+              <Route path="/register" element={<Flights />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/cruise" element={<Cruises />} />
+              <Route path="/cruise/:id" element={<CruiseDetail />} />
+              <Route path="/cruise/booking" element={<CruiseBooking />} />
+              <Route path="/cabs" element={<Cabs />} />
+              <Route path="/cabs/booking" element={<CabBooking />} />
 
-            {/* Dashboard and Profile Routes */}
-            <Route
-              path="/my-bookings"
-              element={
-                <ProtectedRoute>
-                  <MyBookings />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <UserDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/payment"
-              element={
-                <ProtectedRoute>
-                  <Payment />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <ProfilePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
+              {/* Dashboard and Profile Routes */}
+              <Route
+                path="/my-bookings"
+                element={
+                  <ProtectedRoute>
+                    <MyBookings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <UserDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/payment"
+                element={
+                  <ProtectedRoute>
+                    <Payment />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Sub-dashboard routes */}
-            <Route path="/dashboard/upcoming" element={<ProtectedRoute><UpcomingTrips /></ProtectedRoute>} />
-            <Route path="/dashboard/cancellations" element={<ProtectedRoute><Cancellations /></ProtectedRoute>} />
-            <Route path="/dashboard/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
-            <Route path="/dashboard/travellers" element={<ProtectedRoute><Travellers /></ProtectedRoute>} />
-            <Route path="/support" element={<Support />} />
+              {/* Sub-dashboard routes */}
+              <Route path="/dashboard/upcoming" element={<ProtectedRoute><UpcomingTrips /></ProtectedRoute>} />
+              <Route path="/dashboard/cancellations" element={<ProtectedRoute><Cancellations /></ProtectedRoute>} />
+              <Route path="/dashboard/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
+              <Route path="/dashboard/travellers" element={<ProtectedRoute><Travellers /></ProtectedRoute>} />
+              <Route path="/support" element={<Support />} />
 
-            {/* Catch-all route */}
-            <Route path="*" element={<ComingSoon />} />
-          </Routes>
+              {/* Catch-all route */}
+              <Route path="*" element={<ComingSoon />} />
+            </Routes>
+          </Suspense>
         </Router>
       </GlobalProvider>
     </AuthProvider>

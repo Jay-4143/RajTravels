@@ -8,6 +8,13 @@ const mongoose = require('mongoose');
 const Flight = require('../models/flight');
 const amadeusService = require('../services/amadeusService');
 const { transformFlightOffers } = require('../utils/amadeusTransformers');
+const fs = require('fs');
+
+const debugLog = (msg) => {
+  const timestamp = new Date().toISOString();
+  const logMsg = `[${timestamp}] ${msg}\n`;
+  fs.appendFileSync('debug.log', logMsg);
+};
 
 /**
  * @desc    Search flights via Amadeus API
@@ -38,6 +45,9 @@ exports.searchFlights = async (req, res, next) => {
       page = 1,
       limit = 20,
     } = req.query;
+
+    debugLog(`FULL URL: ${req.originalUrl}`);
+    debugLog(`RAW QUERY: ${JSON.stringify(req.query)}`);
 
     // Map travelClass from frontend format to Amadeus format
     const classMap = {
@@ -99,9 +109,32 @@ exports.searchFlights = async (req, res, next) => {
       const re = new RegExp(airline, 'i');
       flights = flights.filter(f => re.test(f.airline) || re.test(f.airlineCode));
     }
-    if (minPrice) flights = flights.filter(f => f.price >= parseInt(minPrice));
-    if (maxPrice) flights = flights.filter(f => f.price <= parseInt(maxPrice));
+    const paxCount = parseInt(passengers) || 1;
+    debugLog(`Filtering flights: paxCount=${paxCount}, minPrice=${minPrice}, maxPrice=${maxPrice}`);
+
+    if (minPrice) {
+      const min = parseInt(minPrice);
+      flights = flights.filter(f => (f.price / paxCount) >= min);
+    }
+    if (maxPrice) {
+      const max = parseInt(maxPrice);
+      const beforeCount = flights.length;
+      flights = flights.filter(f => (f.price / paxCount) <= max);
+      debugLog(`MaxPrice ${max} filter: Before=${beforeCount}, After=${flights.length}`);
+    }
+
     if (refundable === 'true') flights = flights.filter(f => f.refundable);
+
+    // ── Exact stops filter ──
+    if (maxStops !== undefined && maxStops !== '') {
+      const s = parseInt(maxStops);
+      debugLog(`Parsed maxStops: ${s}`);
+      const beforeFilter = flights.length;
+      if (s === 0) flights = flights.filter(f => f.stops === 0);
+      else if (s === 1) flights = flights.filter(f => f.stops === 1);
+      else if (s === 2) flights = flights.filter(f => f.stops >= 2);
+      debugLog(`Stop filter applied. Before: ${beforeFilter}, After: ${flights.length}`);
+    }
 
     if (departureTimeFrom && departureTimeTo) {
       flights = flights.filter(f => {
@@ -216,12 +249,14 @@ exports._localSearchFlights = async (req, res, next) => {
     depDateEnd.setDate(depDateEnd.getDate() + 1);
     query.departureDate = { $gte: depDate, $lt: depDateEnd };
     if (airline) query.airline = new RegExp(airline, 'i');
-    if (minPrice || maxPrice) {
-      query.price = {};
-      if (minPrice) query.price.$gte = parseInt(minPrice);
-      if (maxPrice) query.price.$lte = parseInt(maxPrice);
+    // We filter by per-person price after the query for accuracy
+    const paxCount = parseInt(passengers) || 1;
+    if (maxStops !== undefined) {
+      const s = parseInt(maxStops);
+      if (s === 0) query.stops = 0;
+      else if (s === 1) query.stops = 1;
+      else if (s === 2) query.stops = { $gte: 2 };
     }
-    if (maxStops !== undefined) query.stops = { $lte: parseInt(maxStops) };
     if (flightClass) query.class = flightClass;
 
     const sortObj = {};
@@ -232,8 +267,19 @@ exports._localSearchFlights = async (req, res, next) => {
     else sortObj.price = 1;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    const flights = await Flight.find(query).sort(sortObj).skip(skip).limit(parseInt(limit)).lean();
-    const total = await Flight.countDocuments(query);
+    const totalBeforeFilter = await Flight.countDocuments(query);
+    let flights = await Flight.find(query).sort(sortObj).skip(skip).limit(parseInt(limit)).lean();
+
+    // Post-query filtering for per-person price
+    if (minPrice || maxPrice) {
+      flights = flights.filter(f => {
+        const perPerson = f.price / paxCount;
+        if (minPrice && perPerson < parseInt(minPrice)) return false;
+        if (maxPrice && perPerson > parseInt(maxPrice)) return false;
+        return true;
+      });
+    }
+    const total = flights.length; // Approximate total after filtering
 
     if (departureTimeFrom && departureTimeTo) {
       flights = flights.filter(f => {
@@ -259,7 +305,58 @@ exports._localSearchFlights = async (req, res, next) => {
       });
     }
 
-    const response = { success: true, flights, pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) } };
+    // Map local results to include segments if stops > 0
+    const flightsWithSegments = flights.map(f => {
+      const segments = [];
+      if (f.stops > 0) {
+        // Fallback to if stopCities is missing
+        const cityList = (f.stopCities && f.stopCities.length > 0) ? f.stopCities : ["BDQ"];
+
+        // Segment 1: Origin to first stop
+        segments.push({
+          flightNumber: f.flightNumber,
+          airline: f.airline,
+          from: f.from,
+          to: cityList[0],
+          fromCity: f.fromCity || f.from,
+          toCity: cityList[0] === "BDQ" ? "Vadodara" : cityList[0],
+          fromAirport: f.fromAirport || `${f.from} International Airport`,
+          toAirport: cityList[0] === "BDQ" ? "Vadodara Airport" : `${cityList[0]} International Airport`,
+          departureTime: f.departureTime,
+          arrivalTime: new Date(new Date(f.departureTime).getTime() + 2 * 3600000).toISOString(),
+          duration: "2h 0m",
+          aircraft: "Airbus Jet",
+          layoverDuration: "1h 30m"
+        });
+        // Segment 2: Last stop to destination
+        segments.push({
+          flightNumber: f.flightNumber,
+          airline: f.airline,
+          from: cityList[cityList.length - 1],
+          to: f.to,
+          fromCity: cityList[cityList.length - 1] === "BDQ" ? "Vadodara" : cityList[cityList.length - 1],
+          toCity: f.toCity || f.to,
+          fromAirport: cityList[cityList.length - 1] === "BDQ" ? "Vadodara Airport" : `${cityList[cityList.length - 1]} International Airport`,
+          toAirport: f.toAirport || `${f.to} International Airport`,
+          departureTime: new Date(new Date(f.arrivalTime).getTime() - 2 * 3600000).toISOString(),
+          arrivalTime: f.arrivalTime,
+          duration: "2h 0m",
+          aircraft: "Airbus Jet"
+        });
+      }
+      return { ...f, segments };
+    });
+
+    const response = {
+      success: true,
+      flights: flightsWithSegments,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    };
 
     if (returnDate) {
       const returnQuery = { from: new RegExp(to, 'i'), to: new RegExp(from, 'i'), isActive: true, seatsAvailable: { $gte: parseInt(passengers) || 1 } };
@@ -269,7 +366,43 @@ exports._localSearchFlights = async (req, res, next) => {
       retDateEnd.setDate(retDateEnd.getDate() + 1);
       returnQuery.departureDate = { $gte: retDate, $lt: retDateEnd };
       const returnFlights = await Flight.find(returnQuery).sort(sortObj).skip(skip).limit(parseInt(limit)).lean();
-      response.returnFlights = returnFlights;
+      const returnFlightsWithSegments = returnFlights.map(f => {
+        const segments = [];
+        if (f.stops > 0) {
+          const cityList = (f.stopCities && f.stopCities.length > 0) ? f.stopCities : ["BDQ"];
+          segments.push({
+            flightNumber: f.flightNumber,
+            airline: f.airline,
+            from: f.from,
+            to: cityList[0],
+            fromCity: f.fromCity || f.from,
+            toCity: cityList[0] === "BDQ" ? "Vadodara" : cityList[0],
+            fromAirport: f.fromAirport || `${f.from} International Airport`,
+            toAirport: cityList[0] === "BDQ" ? "Vadodara Airport" : `${cityList[0]} International Airport`,
+            departureTime: f.departureTime,
+            arrivalTime: new Date(new Date(f.departureTime).getTime() + 2 * 3600000).toISOString(),
+            duration: "2h 0m",
+            aircraft: "Airbus Jet",
+            layoverDuration: "1h 30m"
+          });
+          segments.push({
+            flightNumber: f.flightNumber,
+            airline: f.airline,
+            from: cityList[cityList.length - 1],
+            to: f.to,
+            fromCity: cityList[cityList.length - 1] === "BDQ" ? "Vadodara" : cityList[cityList.length - 1],
+            toCity: f.toCity || f.to,
+            fromAirport: cityList[cityList.length - 1] === "BDQ" ? "Vadodara Airport" : `${cityList[cityList.length - 1]} International Airport`,
+            toAirport: f.toAirport || `${f.to} International Airport`,
+            departureTime: new Date(new Date(f.arrivalTime).getTime() - 2 * 3600000).toISOString(),
+            arrivalTime: f.arrivalTime,
+            duration: "2h 0m",
+            aircraft: "Airbus Jet"
+          });
+        }
+        return { ...f, segments };
+      });
+      response.returnFlights = returnFlightsWithSegments;
     }
 
     res.json(response);
@@ -289,9 +422,46 @@ exports.getAllFlights = async (req, res, next) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const flights = await Flight.find({ isActive: true }).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)).lean();
     const total = await Flight.countDocuments({ isActive: true });
+    const flightsWithSegments = flights.map(f => {
+      const segments = [];
+      if (f.stops > 0) {
+        const cityList = (f.stopCities && f.stopCities.length > 0) ? f.stopCities : ["BDQ"];
+        segments.push({
+          flightNumber: f.flightNumber,
+          airline: f.airline,
+          from: f.from,
+          to: cityList[0],
+          fromCity: f.fromCity || f.from,
+          toCity: cityList[0] === "BDQ" ? "Vadodara" : cityList[0],
+          fromAirport: f.fromAirport || `${f.from} International Airport`,
+          toAirport: cityList[0] === "BDQ" ? "Vadodara Airport" : `${cityList[0]} International Airport`,
+          departureTime: f.departureTime,
+          arrivalTime: new Date(new Date(f.departureTime).getTime() + 2 * 3600000).toISOString(),
+          duration: "2h 0m",
+          aircraft: "Airbus Jet",
+          layoverDuration: "1h 30m"
+        });
+        segments.push({
+          flightNumber: f.flightNumber,
+          airline: f.airline,
+          from: cityList[cityList.length - 1],
+          to: f.to,
+          fromCity: cityList[cityList.length - 1] === "BDQ" ? "Vadodara" : cityList[cityList.length - 1],
+          toCity: f.toCity || f.to,
+          fromAirport: cityList[cityList.length - 1] === "BDQ" ? "Vadodara Airport" : `${cityList[cityList.length - 1]} International Airport`,
+          toAirport: f.toAirport || `${f.to} International Airport`,
+          departureTime: new Date(new Date(f.arrivalTime).getTime() - 2 * 3600000).toISOString(),
+          arrivalTime: f.arrivalTime,
+          duration: "2h 0m",
+          aircraft: "Airbus Jet"
+        });
+      }
+      return { ...f, segments };
+    });
+
     res.json({
       success: true,
-      flights,
+      flights: flightsWithSegments,
       pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) },
     });
   } catch (error) {
@@ -306,11 +476,47 @@ exports.getAllFlights = async (req, res, next) => {
  */
 exports.getFlightById = async (req, res, next) => {
   try {
-    const flight = await Flight.findById(req.params.id);
+    const flight = await Flight.findById(req.params.id).lean();
     if (!flight) {
       return res.status(404).json({ success: false, message: 'Flight not found' });
     }
-    res.json({ success: true, flight });
+
+    // Add segments to detail view
+    const segments = [];
+    if (flight.stops > 0) {
+      const cityList = (flight.stopCities && flight.stopCities.length > 0) ? flight.stopCities : ["BDQ"];
+      segments.push({
+        flightNumber: flight.flightNumber,
+        airline: flight.airline,
+        from: flight.from,
+        to: cityList[0],
+        fromCity: flight.fromCity || flight.from,
+        toCity: cityList[0] === "BDQ" ? "Vadodara" : cityList[0],
+        fromAirport: flight.fromAirport || `${flight.from} International Airport`,
+        toAirport: cityList[0] === "BDQ" ? "Vadodara Airport" : `${cityList[0]} International Airport`,
+        departureTime: flight.departureTime,
+        arrivalTime: new Date(new Date(flight.departureTime).getTime() + 2 * 3600000).toISOString(),
+        duration: "2h 0m",
+        aircraft: "Airbus Jet",
+        layoverDuration: "1h 30m"
+      });
+      segments.push({
+        flightNumber: flight.flightNumber,
+        airline: flight.airline,
+        from: cityList[cityList.length - 1],
+        to: flight.to,
+        fromCity: cityList[cityList.length - 1] === "BDQ" ? "Vadodara" : cityList[cityList.length - 1],
+        toCity: flight.toCity || flight.to,
+        fromAirport: cityList[cityList.length - 1] === "BDQ" ? "Vadodara Airport" : `${cityList[cityList.length - 1]} International Airport`,
+        toAirport: flight.toAirport || `${flight.to} International Airport`,
+        departureTime: new Date(new Date(flight.arrivalTime).getTime() - 2 * 3600000).toISOString(),
+        arrivalTime: flight.arrivalTime,
+        duration: "2h 0m",
+        aircraft: "Airbus Jet"
+      });
+    }
+
+    res.json({ success: true, flight: { ...flight, segments } });
   } catch (error) {
     next(error);
   }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { searchBuses, getCities } from '../api/busApi';
 import {
     FaBus, FaMapMarkerAlt, FaCalendarAlt, FaSearch, FaArrowRight,
@@ -277,6 +277,7 @@ const FAQItem = ({ q, a }) => {
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────
 const Buses = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { formatPrice } = useGlobal();
     const defaultDate = new Date().toISOString().split('T')[0];
 
@@ -565,7 +566,14 @@ const Buses = () => {
                             ) : (
                                 <div className="space-y-4">
                                     {filteredBuses.map(bus => (
-                                        <BusCard key={bus._id} bus={bus} onSelect={(b) => navigate(`/buses/${b._id}/book`, { state: { bus: b, searchDate: searchForm.date } })} />
+                                        <BusCard key={bus._id} bus={bus} onSelect={(b) => {
+                                            const token = localStorage.getItem("token");
+                                            if (!token) {
+                                                navigate("/login", { state: { returnTo: location.pathname } });
+                                                return;
+                                            }
+                                            navigate(`/buses/${b._id}/book`, { state: { bus: b, searchDate: searchForm.date } });
+                                        }} />
                                     ))}
                                 </div>
                             )}
@@ -614,6 +622,7 @@ const Buses = () => {
                                     <img
                                         src={route.image}
                                         alt={`${route.from} to ${route.to}`}
+                                        loading="lazy"
                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                         onError={e => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1529253355930-ddbe423a2ac7?w=600&q=80'; }}
                                     />
@@ -712,7 +721,7 @@ const Buses = () => {
                         <div className="max-w-6xl mx-auto">
                             <div className="text-center mb-10">
                                 <p className="text-blue-600 text-sm font-semibold uppercase tracking-wider mb-1">Our Promise</p>
-                                <h2 className="text-3xl font-extrabold text-gray-800">Why Book With TravelGO?</h2>
+                                <h2 className="text-3xl font-extrabold text-gray-800">Why Book With Raj Travel?</h2>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                                 {[
@@ -772,7 +781,7 @@ const Buses = () => {
                                 </div>
                                 <h2 className="text-3xl font-extrabold mb-4">Your Safety Is Our<br /><span className="text-yellow-400">Top Priority</span></h2>
                                 <p className="text-white/80 text-base leading-relaxed mb-6">
-                                    Every bus operator on TravelGO undergoes a rigorous verification process. Our team checks licences, safety records, and user ratings before any operator is listed.
+                                    Every bus operator on Raj Travel undergoes a rigorous verification process. Our team checks licences, safety records, and user ratings before any operator is listed.
                                 </p>
                                 <div className="space-y-3">
                                     {['All operators are RTO licensed & verified', 'GPS-enabled live tracking on select buses', 'Dedicated grievance redressal team', 'Emergency support helpline 24/7'].map(item => (
@@ -831,10 +840,10 @@ const Buses = () => {
                         <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-8">
                             <div className="flex-1 text-white">
                                 <div className="inline-flex items-center gap-2 bg-white/10 text-white text-xs px-3 py-1.5 rounded-full mb-4 border border-white/20">
-                                    <FaMobileAlt /> TravelGO App
+                                    <FaMobileAlt /> Raj Travel App
                                 </div>
                                 <h2 className="text-3xl font-extrabold mb-3">Book Tickets On The Go</h2>
-                                <p className="text-white/70 text-base mb-6">Download the TravelGO app for exclusive mobile-only deals, live tracking, and instant digital tickets on your phone.</p>
+                                <p className="text-white/70 text-base mb-6">Download the Raj Travel app for exclusive mobile-only deals, live tracking, and instant digital tickets on your phone.</p>
                                 <div className="flex gap-3 flex-wrap">
                                     <button className="flex items-center gap-2 bg-white text-gray-900 font-bold px-5 py-3 rounded-xl hover:bg-gray-100 transition-colors text-sm shadow-lg">
                                         🍎 App Store
